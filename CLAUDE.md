@@ -7,12 +7,10 @@ Smashloop is an incremental breakout game built with Phaser 3, TypeScript, and V
 ## Commands
 
 ```bash
-npm install              # Install dependencies
-npm run dev              # Start dev server with hot-reload at http://localhost:8080
-npm run build            # Production build to dist/
-npm run lint             # Run ESLint on src/
-npm run lint:fix         # Run ESLint with auto-fix
-npm run format           # Format src/**/*.ts with Prettier
+npm run dev              # http://localhost:8080
+npm run build            # production
+npm run lint             # ESLint
+npm run format           # Prettier
 ```
 
 ## When to Read Agent Docs
@@ -20,6 +18,8 @@ npm run format           # Format src/**/*.ts with Prettier
 | Task | Read |
 |------|------|
 | Project structure, components | `agent_docs/architecture.md` |
+| Code patterns, naming, performance | `agent_docs/conventions.md` |
+| Recent changes history | `agent_docs/memory-bank.md` |
 
 ## Rules
 
@@ -63,6 +63,11 @@ npm run format           # Format src/**/*.ts with Prettier
 - Run commands directly without pipes when possible
 - Use command-specific flags to limit output (e.g., `git log -n 10` instead of `git log | head -10`)
 - Avoid chained pipes that can cause output to buffer indefinitely
+
+## Architecture Patterns
+
+- Use event-driven communication between decoupled systems (Phaser's `EventEmitter`)
+- Use FSM (finite state machines) for game states and entity behaviors where state transitions are well-defined
 
 ## TypeScript
 
