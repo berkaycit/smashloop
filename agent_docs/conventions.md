@@ -3,15 +3,15 @@
 ## Naming
 
 - **Scenes**: PascalCase class names extending `Phaser.Scene`, scene key matches class name (e.g., `class Game` → `super('Game')`)
-- **Assets**: kebab-case filenames in `public/assets/`, camelCase keys when loading (e.g., `this.load.image('background', 'bg.png')`)
+- **Assets/Textures**: camelCase keys for runtime-generated textures (e.g., `'paddle'`, `'ball'`, `'brick'`)
 - **Config objects**: `const` with explicit Phaser type annotation (e.g., `const config: Types.Core.GameConfig`)
 - **Functions**: camelCase, PascalCase only for constructors/factories (e.g., `StartGame`)
 
 ## Code Patterns
 
 - One scene per file in `src/game/scenes/`
-- Asset loading in `preload()`, rendering/logic in `create()` and `update()`
-- Set asset base path once with `this.load.setPath('assets')` instead of repeating paths
+- Texture generation and game object setup in `create()`, per-frame logic in `update()`
+- Game state managed via a `GameState` string union type (`'idle' | 'playing' | 'gameOver' | 'win'`)
 - Chain Phaser methods (e.g., `.setOrigin(0.5).setDepth(100)`)
 - Phaser is imported destructured: `import { Scene } from 'phaser'`
 

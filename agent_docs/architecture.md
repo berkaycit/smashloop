@@ -2,23 +2,43 @@
 
 ## Entry Flow
 
-`index.html` → `src/main.ts` → `src/game/main.ts` → scene classes
+`index.html` -> `src/main.ts` -> `src/game/main.ts` -> scene classes
 
-- `src/main.ts` — Bootstrap: waits for DOMContentLoaded, then calls `StartGame()` targeting the `#game-container` div
-- `src/game/main.ts` — Phaser game configuration (1024x768, AUTO renderer, FIT scale mode) and scene registration
-- `src/game/scenes/` — Phaser Scene classes containing game logic. Each scene has `preload()` for asset loading and `create()`/`update()` for gameplay
+- `src/main.ts` -- Bootstrap: waits for DOMContentLoaded, calls `StartGame()` targeting `#game-container`
+- `src/game/main.ts` -- Phaser config: 1024x768, AUTO renderer, FIT scale, Arcade physics (no gravity), bg `#1a1a2e`
+- `src/game/scenes/Game.ts` -- Single scene containing all breakout game logic
 
-## Static Assets
+## Scene Structure (Game.ts)
 
-Assets go in `public/assets/` and are loaded in scene `preload()` methods via `this.load.*()`. They are served at the `/assets/` path.
+All game logic lives in one scene class. No separate entity classes.
+
+**Properties**: state (FSM), paddle, ball, bricks (static group), score/lives counters, ballSpeed, UI text objects
+
+**Lifecycle**:
+- `create()` -- texture generation, object creation, collider setup, input binding, UI, state init
+- `update()` -- only used to keep ball attached to paddle in idle state
+
+**Private methods**: `generateTextures`, `createBricks`, `resetBall`, `launchBall`, `stopBall`, `hitPaddle`, `hitBrick`, `loseLife`
+
+**Accessor**: `ballBody` getter centralizes the `Physics.Arcade.Body` cast
+
+**Layout**: positions derived from `this.scale` (width/height), not hardcoded pixel values. Tuning constants (speeds, sizes, counts) defined as module-level consts.
+
+## Runtime Textures
+
+No static image assets. All textures (paddle, ball, brick) generated via `Graphics.generateTexture()` in `create()`. Bricks tinted per row using `setTint()`.
+
+## Physics
+
+Arcade physics with no gravity. Ball has bounce=1 and collideWorldBounds. Paddle is immovable. Bricks use a static group. World bounds event detects ball falling off bottom edge.
 
 ## Vite Config
 
-Split into `vite/config.dev.mjs` and `vite/config.prod.mjs`. Both configure Phaser as a separate chunk for caching. Production config uses Terser for minification.
+Split into `vite/config.dev.mjs` and `vite/config.prod.mjs`. Phaser bundled as separate chunk. Production uses Terser.
 
 ## Key Technical Details
 
-- TypeScript strict mode is enabled (tsconfig target: ES2020, module: ESNext)
-- Phaser 3.90.0 is the game framework
-- No backend/database — this is a purely client-side game
-- Deploy by uploading the `dist/` folder contents to any static web server
+- TypeScript strict mode (ES2020 target, ESNext module)
+- Phaser 3.90.0
+- Purely client-side, no backend
+- Deploy by uploading `dist/` to any static server

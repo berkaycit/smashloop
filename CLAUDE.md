@@ -18,6 +18,7 @@ npm run format           # Prettier
 | Task | Read |
 |------|------|
 | Project structure, components | `agent_docs/architecture.md` |
+| Game mechanics, state machine, tuning | `agent_docs/gameplay.md` |
 | Code patterns, naming, performance | `agent_docs/conventions.md` |
 | Recent changes history | `agent_docs/memory-bank.md` |
 
