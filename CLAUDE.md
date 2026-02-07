@@ -23,18 +23,36 @@ npm run format           # Format src/**/*.ts with Prettier
 
 ## Rules
 
-- ALWAYS read and understand relevant files before proposing edits. Do not speculate about code you have not inspected
+### Think Before Coding
+- State assumptions explicitly; if uncertain, use the `AskUserQuestion` tool rather than guess
+- When ambiguity exists, present multiple interpretations via `AskUserQuestion` — don't pick silently
+- Push back if a simpler approach exists; stop and ask via `AskUserQuestion` when confused
+
+### Simplicity First
+- No features, abstractions, or error handling beyond what was asked
+- No speculative "flexibility" or "configurability"
+- If 200 lines could be 50, rewrite it
+- Only create an abstraction if it's actually needed
+
+### Surgical Changes
+- Touch only what you must; don't "improve" adjacent code, comments, or formatting
+- Match existing style, even if you'd do it differently
+- If you notice unrelated dead code, mention it — don't delete it
+- Remove imports/variables/functions that YOUR changes made unused, not pre-existing dead code
+
+### Goal-Driven Execution
+- Define verifiable success criteria before implementing
+- Write or run tests first to confirm the change works
+- Every action should trace back to the user's stated goal
+
+### General
+- ALWAYS read and understand relevant files before proposing edits
 - If critical info is needed and you suspect your knowledge may be outdated, fetch the latest docs via Context7 MCP first
-- Before writing new code, check for existing related methods/classes and reuse or modify them instead of duplicating functionality
-- Avoid generic names; choose flexible, extensible naming for classes
+- Prefer `npm run format` / `npm run lint:fix` over manual edits for style fixes
+- Before writing new code, check for existing related methods/classes and reuse them
 - Prefer clear function/variable names over inline comments
-- If a critical point is unclear, ask clarifying questions with options before implementing the plan
-- Only create an abstraction if it’s actually needed
-- Only make changes that are directly requested. Keep solutions simple and focused
-- Avoid helper functions when a simple inline expression would suffice
-- Ensure your changes are easy to verify
 - After each change, do NOT run npm run build
-- Don’t use emojis
+- Don't use emojis
 
 ## Bash Guidelines
 
