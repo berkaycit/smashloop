@@ -12,21 +12,28 @@
 
 All game logic lives in one scene class. No separate entity classes.
 
-**Properties**: state (FSM), paddle, ball, bricks (static group), score/lives counters, ballSpeed, UI text objects
+**Properties**: state (FSM), paddle, ball, bricks (static group), score/lives counters, ballSpeed, UI text objects, juice state (trail ring buffer, face/blink/mouth, bgFlash, confetti emitter)
 
 **Lifecycle**:
-- `create()` -- texture generation, object creation, collider setup, input binding, UI, state init
-- `update()` -- only used to keep ball attached to paddle in idle state
+- `create()` -- texture generation, object creation, collider setup, emitters, input binding, UI, state init
+- `update()` -- idle ball tracking, paddle stretch, ball stretch/rotation/trail, blink timer, mouth expression, face drawing
 
-**Private methods**: `generateTextures`, `createBricks`, `resetBall`, `launchBall`, `stopBall`, `hitPaddle`, `hitBrick`, `loseLife`
+**Private methods**: `generateTextures`, `createBricks`, `resetBall`, `launchBall`, `stopBall`, `hitPaddle`, `hitBrick`, `loseLife`, `ballImpactFx`, `triggerBlink`, `clearTrail`, `drawTrail`, `drawFace`
 
 **Accessor**: `ballBody` getter centralizes the `Physics.Arcade.Body` cast
 
 **Layout**: positions derived from `this.scale` (width/height), not hardcoded pixel values. Tuning constants (speeds, sizes, counts) defined as module-level consts.
 
+## Particles (particles.ts)
+
+Disposable particle emitters for brick destruction effects. Each function creates an emitter, calls `explode()`, then self-destructs via `time.delayedCall`.
+
+- `emitImpactSparks` -- 8 spark particles at brick position with brick tint
+- `emitBrickShards` -- 6 shard particles with gravity, rotation, and darkened tint variant
+
 ## Runtime Textures
 
-No static image assets. All textures (paddle, ball, brick) generated via `Graphics.generateTexture()` in `create()`, guarded to run only once (textures persist across `scene.restart()`). Bricks tinted per row using `setTint()`.
+No static image assets. All textures (paddle, ball, brick, particle, spark, shard) generated via `Graphics.generateTexture()` in `create()`, guarded to run only once (textures persist across `scene.restart()`). Bricks tinted per row, paddle tinted cyan, ball tinted yellow.
 
 ## Physics
 
