@@ -29,6 +29,8 @@ Generated at runtime via `Graphics.generateTexture()`, no static assets:
 
 ## Collisions
 
+All collision callbacks guard on `state === 'playing'` to prevent side effects during idle/gameOver/win.
+
 - **Ball <-> Paddle** (`hitPaddle`): recalculates ball angle based on hit offset (-60 to +60 degrees)
 - **Ball <-> Bricks** (`hitBrick`): destroys brick, adds score, scales ball speed by multiplier, checks win
 - **World bounds** (`worldbounds` event): bottom edge triggers `loseLife()`

@@ -59,13 +59,13 @@ export class Game extends Scene {
         this.physics.world.on(
             'worldbounds',
             (_body: Physics.Arcade.Body, _up: boolean, down: boolean) => {
-                if (down) this.loseLife();
+                if (down && this.state === 'playing') this.loseLife();
             },
         );
 
         this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '20px', color: '#ffffff' });
         this.livesText = this.add
-            .text(width - 16, 16, 'Lives: 3', { fontSize: '20px', color: '#ffffff' })
+            .text(width - 16, 16, `Lives: ${INITIAL_LIVES}`, { fontSize: '20px', color: '#ffffff' })
             .setOrigin(1, 0);
         this.messageText = this.add
             .text(centerX, height / 2, 'Click to Launch', { fontSize: '32px', color: '#ffffff' })
@@ -104,6 +104,8 @@ export class Game extends Scene {
     }
 
     private generateTextures() {
+        if (this.textures.exists('paddle')) return;
+
         const g = this.add.graphics();
         g.fillStyle(0xffffff);
 
@@ -161,6 +163,7 @@ export class Game extends Scene {
     private hitPaddle(
         _ball: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
     ) {
+        if (this.state !== 'playing') return;
         const ball = _ball as Physics.Arcade.Image;
         const diff = ball.x - this.paddle.x;
         const angle = Phaser.Math.Clamp(diff, -MAX_BOUNCE_ANGLE, MAX_BOUNCE_ANGLE);
@@ -173,6 +176,7 @@ export class Game extends Scene {
         _ball: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
         _brick: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
     ) {
+        if (this.state !== 'playing') return;
         (_brick as Physics.Arcade.Image).destroy();
 
         this.score += POINTS_PER_BRICK;

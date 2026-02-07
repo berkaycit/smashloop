@@ -26,7 +26,7 @@ All game logic lives in one scene class. No separate entity classes.
 
 ## Runtime Textures
 
-No static image assets. All textures (paddle, ball, brick) generated via `Graphics.generateTexture()` in `create()`. Bricks tinted per row using `setTint()`.
+No static image assets. All textures (paddle, ball, brick) generated via `Graphics.generateTexture()` in `create()`, guarded to run only once (textures persist across `scene.restart()`). Bricks tinted per row using `setTint()`.
 
 ## Physics
 
