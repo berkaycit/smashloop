@@ -10,6 +10,8 @@ const config: Types.Core.GameConfig = {
     height: 768,
     parent: 'game-container',
     backgroundColor: '#1a1a2e',
+    antialias: true,
+    roundPixels: true,
     physics: {
         default: 'arcade',
         arcade: {},

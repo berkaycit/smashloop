@@ -13,12 +13,14 @@ export class Upgrade extends Scene {
         const cx = width / 2;
         const progress = loadProgress();
 
+        const dpr = window.devicePixelRatio;
         this.add
             .text(cx, 30, `Coins: ${progress.coins}`, {
                 fontSize: '28px',
                 color: '#ffcc11',
                 fontStyle: 'bold',
             })
+            .setResolution(dpr)
             .setOrigin(0.5);
 
         this.createButton(width - 80, 30, 'BACK', () => {
@@ -51,12 +53,14 @@ export class Upgrade extends Scene {
 
         this.add.rectangle(cx, y + h / 2, cardW, h, 0x222244, 1);
 
+        const dpr = window.devicePixelRatio;
         this.add
             .text(cx - cardW / 2 + 20, y + 10, def.name, {
                 fontSize: '20px',
                 color: '#ffffff',
                 fontStyle: 'bold',
             })
+            .setResolution(dpr)
             .setOrigin(0, 0);
 
         this.add
@@ -64,6 +68,7 @@ export class Upgrade extends Scene {
                 fontSize: '14px',
                 color: '#aaaacc',
             })
+            .setResolution(dpr)
             .setOrigin(0, 0);
 
         this.add
@@ -71,6 +76,7 @@ export class Upgrade extends Scene {
                 fontSize: '16px',
                 color: '#88aaff',
             })
+            .setResolution(dpr)
             .setOrigin(0, 0);
 
         this.add
@@ -78,6 +84,7 @@ export class Upgrade extends Scene {
                 fontSize: '14px',
                 color: '#66dd88',
             })
+            .setResolution(dpr)
             .setOrigin(0, 0);
 
         const btnX = cx + cardW / 2 - 70;
@@ -90,6 +97,7 @@ export class Upgrade extends Scene {
                     color: '#888888',
                     fontStyle: 'bold',
                 })
+                .setResolution(dpr)
                 .setOrigin(0.5);
         } else {
             const btnColor = canAfford ? 0x44aa44 : 0x555555;
@@ -99,6 +107,7 @@ export class Upgrade extends Scene {
                     fontSize: '16px',
                     color: canAfford ? '#ffffff' : '#888888',
                 })
+                .setResolution(dpr)
                 .setOrigin(0.5);
 
             if (canAfford) {
@@ -123,6 +132,7 @@ export class Upgrade extends Scene {
         const bg = this.add.rectangle(x, y, 120, 36, 0x334455, 1).setInteractive();
         this.add
             .text(x, y, label, { fontSize: '18px', color: '#ffffff', fontStyle: 'bold' })
+            .setResolution(window.devicePixelRatio)
             .setOrigin(0.5);
 
         bg.on('pointerover', () => bg.setFillStyle(0x4499ff));

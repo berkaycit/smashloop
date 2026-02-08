@@ -137,19 +137,24 @@ export class Game extends Scene {
         );
 
         // UI text (depth 10)
+        const dpr = window.devicePixelRatio;
         this.scoreText = this.add
             .text(16, 16, 'Score: 0', { fontSize: '20px', color: '#ffffff' })
+            .setResolution(dpr)
             .setDepth(10);
         this.livesText = this.add
             .text(width - 16, 16, `Lives: ${this.lives}`, { fontSize: '20px', color: '#ffffff' })
+            .setResolution(dpr)
             .setOrigin(1, 0)
             .setDepth(10);
         this.coinText = this.add
             .text(centerX, 16, 'Coins: 0', { fontSize: '20px', color: '#ffd700' })
+            .setResolution(dpr)
             .setOrigin(0.5, 0)
             .setDepth(10);
         this.ammoText = this.add
             .text(16, 42, `Ammo: ${this.ammo}`, { fontSize: '16px', color: '#aaaaff' })
+            .setResolution(dpr)
             .setDepth(10)
             .setVisible(this.maxAmmo > 0);
         this.messageText = this.add
@@ -159,6 +164,7 @@ export class Game extends Scene {
                 backgroundColor: 'rgba(0,0,0,0.75)',
                 padding: { x: 16, y: 10 },
             })
+            .setResolution(dpr)
             .setOrigin(0.5)
             .setDepth(10);
 
@@ -382,6 +388,7 @@ export class Game extends Scene {
         // Floating coin text
         const coinFloat = this.add
             .text(bx, by, `+${coins}`, { fontSize: '14px', color: '#ffd700' })
+            .setResolution(window.devicePixelRatio)
             .setOrigin(0.5)
             .setDepth(10);
         this.tweens.add({
@@ -499,12 +506,15 @@ export class Game extends Scene {
         const row2Y = cy + 22;
         const gap = 12;
 
+        const dpr = window.devicePixelRatio;
         const l1 = this.add
             .text(0, row1Y, 'Coins Earned:', { fontSize: '26px', color: '#ffd700' })
+            .setResolution(dpr)
             .setOrigin(0, 0.5)
             .setDepth(11);
         const l2 = this.add
             .text(0, row2Y, 'Total Coins:', { fontSize: '26px', color: '#44dd44' })
+            .setResolution(dpr)
             .setOrigin(0, 0.5)
             .setDepth(11);
 
@@ -515,6 +525,7 @@ export class Game extends Scene {
                 color: '#ffd700',
                 fontStyle: 'bold',
             })
+            .setResolution(dpr)
             .setOrigin(0, 0.5)
             .setDepth(11);
         const n2 = this.add
@@ -523,6 +534,7 @@ export class Game extends Scene {
                 color: '#44dd44',
                 fontStyle: 'bold',
             })
+            .setResolution(dpr)
             .setOrigin(0, 0.5)
             .setDepth(11);
 
@@ -542,6 +554,7 @@ export class Game extends Scene {
 
         this.add
             .text(cx - 100, cy + 100, 'Play Again', btnStyle)
+            .setResolution(dpr)
             .setOrigin(0.5)
             .setDepth(10)
             .setInteractive({ useHandCursor: true })
@@ -549,6 +562,7 @@ export class Game extends Scene {
 
         this.add
             .text(cx + 100, cy + 100, 'Upgrades', btnStyle)
+            .setResolution(dpr)
             .setOrigin(0.5)
             .setDepth(10)
             .setInteractive({ useHandCursor: true })
