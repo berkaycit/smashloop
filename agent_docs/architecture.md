@@ -22,13 +22,15 @@ All game logic lives in one scene class. No separate entity classes.
 - `create()` -- loads upgrades from persistence, texture generation, object creation, collider setup, emitters, input binding, UI, state init
 - `update()` -- idle ball tracking, ball stretch/rotation/trail, bullet/bomb cleanup, HP bar drawing, face update
 
-**Key methods**: `generateTextures`, `createBricks`, `drawHpBar`, `drawMessageBg`, `resetBall`, `advanceLevel`, `jumpToLevel`, `updatePaddleTint`, `launchBall`, `stopBall`, `fireBullet`, `throwBomb`, `hitBrickWithBomb`, `destroyBrick`, `breakPaddle`, `hitPaddle`, `hitBrick`, `hitBrickWithBullet`, `loseLife`, `showEndScreen`
+**Key methods**: `generateTextures`, `createBricks`, `drawHpBar`, `drawMessageBg`, `resetBall`, `advanceLevel`, `jumpToLevel`, `updatePaddleTint`, `launchBall`, `stopBall`, `fireBullet`, `throwBomb`, `hitBrickWithBomb`, `damageBrick`, `destroyBrick`, `breakPaddle`, `hitPaddle`, `hitBrick`, `hitBrickWithBullet`, `loseLife`, `showEndScreen`
 
 **Accessor**: `ballBody` getter centralizes the `Physics.Arcade.Body` cast
 
 **End screen**: rendered as overlay text objects within the Game scene (no separate scene). Saves coins to persistence, shows coins earned/total, Play Again and Upgrades buttons.
 
 **Layout**: positions derived from `this.scale` (width/height), not hardcoded pixel values. Tuning constants (speeds, sizes, counts) defined as module-level consts. Bricks arranged per level via `LEVEL_SHAPES` bitmask array (3 levels: Heart/70, Space Invader/80, Skull/90 bricks). Row tints use a rainbow gradient (12 entries for max row count). `create()` accepts optional `{ level }` data for restart-at-level. A dev-only `#dev-level` input in `index.html` allows jumping to any level.
+
+**Brick health**: Bricks have per-level health (level 1 = 1 hit, level 2 = 2, level 3 = 3). Nested brick textures (`brick2`, `brick3`) generated programmatically with concentric rounded rects. `damageBrick()` decrements health, swaps texture, and plays hit feedback; `destroyBrick()` handles final removal. Bombs bypass health and destroy instantly.
 
 **Level progression**: When all bricks cleared, `advanceLevel()` proceeds to next level. On final level win, shows end screen. On game over, Play Again restarts current level; on win, restarts from level 1.
 

@@ -71,8 +71,13 @@ const LEVEL_SHAPES = [
     ],
 ];
 const MAX_LEVEL = LEVEL_SHAPES.length;
+const BRICK_LAYER_INSET_X = 3;
+const BRICK_LAYER_INSET_Y = 2;
+const BRICK_LAYER_GAP_TINT = 0x999999;
+const COINS_PER_HIT = [10, 100, 1000];
 const BALL_TINT = 0xffeb3b;
 const PADDLE_TINT = 0x00e5ff;
+const brickTexKey = (health: number) => (health >= 2 ? `brick${health}` : 'brick');
 
 export class Game extends Scene {
     private state: GameState = 'idle';
@@ -284,17 +289,6 @@ export class Game extends Scene {
         this.state = 'idle';
         this.paddleBroken = false;
         this.face.reset(this.time.now);
-
-        const devInput = document.getElementById('dev-level') as HTMLInputElement | null;
-        if (devInput) {
-            const handler = (e: KeyboardEvent) => {
-                if (e.key !== 'Enter') return;
-                const num = parseInt(devInput.value, 10);
-                if (num >= 1 && num <= MAX_LEVEL) this.jumpToLevel(num);
-            };
-            devInput.addEventListener('keydown', handler);
-            this.events.once('shutdown', () => devInput.removeEventListener('keydown', handler));
-        }
     }
 
     update() {
@@ -361,6 +355,28 @@ export class Game extends Scene {
         if (!this.textures.exists('ball')) {
             tex(() => g.fillCircle(8, 8, 8), 'ball', 16, 16);
             tex(() => g.fillRoundedRect(0, 0, BRICK_W, BRICK_H, 4), 'brick', BRICK_W, BRICK_H);
+
+            // Nested brick textures for multi-hit levels
+            for (let layers = 2; layers <= MAX_LEVEL; layers++) {
+                const sx = BRICK_LAYER_INSET_X;
+                const sy = BRICK_LAYER_INSET_Y;
+                for (let i = 0; i < layers; i++) {
+                    const r = Math.max(4 - i, 2);
+                    if (i > 0) {
+                        g.fillStyle(BRICK_LAYER_GAP_TINT);
+                        const gx = sx * (i * 2 - 1);
+                        const gy = sy * (i * 2 - 1);
+                        g.fillRoundedRect(gx, gy, BRICK_W - gx * 2, BRICK_H - gy * 2, r);
+                    }
+                    g.fillStyle(0xffffff);
+                    const lx = sx * i * 2;
+                    const ly = sy * i * 2;
+                    g.fillRoundedRect(lx, ly, BRICK_W - lx * 2, BRICK_H - ly * 2, r);
+                }
+                g.generateTexture(`brick${layers}`, BRICK_W, BRICK_H);
+                g.clear();
+            }
+
             tex(() => g.fillCircle(2, 2, 2), 'particle', 4, 4);
             tex(() => g.fillCircle(3, 3, 3), 'spark', 6, 6);
             tex(() => g.fillRect(0, 0, 8, 4), 'shard', 8, 4);
@@ -438,9 +454,14 @@ export class Game extends Scene {
                 if (!shape[row][col]) continue;
                 const x = startX + col * (BRICK_W + BRICK_PAD);
                 const y = BRICK_TOP_Y + row * (BRICK_H + BRICK_PAD);
-                const brick = this.bricks.create(x, y, 'brick') as Physics.Arcade.Image;
+                const brick = this.bricks.create(
+                    x,
+                    y,
+                    brickTexKey(this.level),
+                ) as Physics.Arcade.Image;
                 brick.setTint(ROW_TINTS[row]);
                 brick.setDepth(2);
+                brick.setData('health', this.level);
 
                 // Entrance animation
                 brick.setScale(0);
@@ -590,10 +611,59 @@ export class Game extends Scene {
         });
 
         for (const br of toDestroy) {
+            this.awardHitCoins(br.x, br.y, br.getData('health') as number);
             this.destroyBrick(br);
         }
 
         emitExplosion(this, cx, cy);
+    }
+
+    private awardHitCoins(x: number, y: number, hits = 1) {
+        const coins = Math.floor(COINS_PER_HIT[this.level - 1] * this.coinMultiplier * hits);
+        this.coinsEarned += coins;
+        this.coinText.setText(`Coin: ${this.coinsEarned}`);
+
+        const coinFloat = this.add
+            .text(x, y, `+${coins}`, {
+                fontFamily: FONT_FAMILY,
+                fontSize: '14px',
+                color: '#ffd700',
+            })
+            .setResolution(window.devicePixelRatio)
+            .setOrigin(0.5)
+            .setDepth(10);
+        this.tweens.add({
+            targets: coinFloat,
+            y: y - 30,
+            alpha: 0,
+            duration: 600,
+            ease: 'Cubic.Out',
+            onComplete: () => coinFloat.destroy(),
+        });
+    }
+
+    private damageBrick(brick: Physics.Arcade.Image) {
+        const health = (brick.getData('health') as number) - 1;
+        brick.setData('health', health);
+        this.awardHitCoins(brick.x, brick.y);
+
+        if (health <= 0) {
+            this.destroyBrick(brick);
+            return;
+        }
+
+        brick.setTexture(brickTexKey(health));
+
+        this.tweens.add({
+            targets: brick,
+            scaleX: 0.85,
+            scaleY: 0.85,
+            duration: 50,
+            yoyo: true,
+            ease: 'Quad.Out',
+        });
+
+        emitImpactSparks(this, brick.x, brick.y, brick.tintTopLeft);
     }
 
     private destroyBrick(brick: Physics.Arcade.Image) {
@@ -606,29 +676,6 @@ export class Game extends Scene {
         emitBrickShards(this, bx, by, tint);
 
         this.score += POINTS_PER_BRICK;
-
-        const coins = Math.floor(POINTS_PER_BRICK * this.coinMultiplier);
-        this.coinsEarned += coins;
-        this.coinText.setText(`Coin: ${this.coinsEarned}`);
-
-        // Floating coin text
-        const coinFloat = this.add
-            .text(bx, by, `+${coins}`, {
-                fontFamily: FONT_FAMILY,
-                fontSize: '14px',
-                color: '#ffd700',
-            })
-            .setResolution(window.devicePixelRatio)
-            .setOrigin(0.5)
-            .setDepth(10);
-        this.tweens.add({
-            targets: coinFloat,
-            y: by - 30,
-            alpha: 0,
-            duration: 600,
-            ease: 'Cubic.Out',
-            onComplete: () => coinFloat.destroy(),
-        });
 
         if (this.bricks.countActive() === 0) {
             if (this.level < MAX_LEVEL) {
@@ -685,7 +732,7 @@ export class Game extends Scene {
         if (this.state !== 'playing') return;
         const brick = _brick as Physics.Arcade.Image;
 
-        this.destroyBrick(brick);
+        this.damageBrick(brick);
 
         this.ballSpeed *= SPEED_MULTIPLIER;
         const currentSpeed = this.ballBody.speed;
@@ -708,7 +755,7 @@ export class Game extends Scene {
         const bullet = _bullet as Physics.Arcade.Image;
         const brick = _brick as Physics.Arcade.Image;
         bullet.destroy();
-        this.destroyBrick(brick);
+        this.damageBrick(brick);
     }
 
     private loseLife() {
