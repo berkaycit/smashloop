@@ -48,6 +48,8 @@ export class Game extends Scene {
     private messageBg!: GameObjects.Graphics;
     private coinText!: GameObjects.Text;
     private ammoText!: GameObjects.Text;
+    private levelText!: GameObjects.Text;
+    private level = 1;
     private score = 0;
     private lives = 1;
     private ballSpeed = INITIAL_BALL_SPEED;
@@ -174,6 +176,16 @@ export class Game extends Scene {
             })
             .setResolution(dpr)
             .setOrigin(0.5)
+            .setDepth(10);
+
+        this.levelText = this.add
+            .text(centerX, 16, `Level ${this.level}`, {
+                fontFamily: FONT_FAMILY,
+                fontSize: '20px',
+                color: '#ffffff',
+            })
+            .setResolution(dpr)
+            .setOrigin(0.5, 0)
             .setDepth(10);
         this.drawMessageBg();
 
@@ -339,6 +351,7 @@ export class Game extends Scene {
         this.ballSpeed = INITIAL_BALL_SPEED;
         this.state = 'idle';
         this.messageText.setText('Click to Launch').setVisible(true);
+        this.levelText.setText(`Level ${this.level}`);
         this.drawMessageBg();
         this.trail.clear();
         this.ball.setScale(1);
