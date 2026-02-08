@@ -8,7 +8,7 @@ import { loadProgress, saveProgress } from '../persistence';
 type GameState = 'idle' | 'playing' | 'gameOver' | 'win';
 
 const INITIAL_BALL_SPEED = 700;
-const SPEED_MULTIPLIER = 1.02;
+const SPEED_MULTIPLIER = 1.01;
 const BRICK_COLS = 10;
 const BRICK_W = 80;
 const BRICK_H = 28;
@@ -42,7 +42,6 @@ export class Game extends Scene {
     private paddle!: Physics.Arcade.Image;
     private ball!: Physics.Arcade.Image;
     private bricks!: Physics.Arcade.StaticGroup;
-    private scoreText!: GameObjects.Text;
     private livesText!: GameObjects.Text;
     private messageText!: GameObjects.Text;
     private coinText!: GameObjects.Text;
@@ -138,19 +137,14 @@ export class Game extends Scene {
 
         // UI text (depth 10)
         const dpr = window.devicePixelRatio;
-        this.scoreText = this.add
-            .text(16, 16, 'Score: 0', { fontSize: '20px', color: '#ffffff' })
-            .setResolution(dpr)
-            .setDepth(10);
         this.livesText = this.add
             .text(width - 16, 16, `Lives: ${this.lives}`, { fontSize: '20px', color: '#ffffff' })
             .setResolution(dpr)
             .setOrigin(1, 0)
             .setDepth(10);
         this.coinText = this.add
-            .text(centerX, 16, 'Coins: 0', { fontSize: '20px', color: '#ffd700' })
+            .text(16, 16, 'Coins: 0', { fontSize: '20px', color: '#ffd700' })
             .setResolution(dpr)
-            .setOrigin(0.5, 0)
             .setDepth(10);
         this.ammoText = this.add
             .text(16, 42, `Ammo: ${this.ammo}`, { fontSize: '16px', color: '#aaaaff' })
@@ -277,14 +271,14 @@ export class Game extends Scene {
                 // Entrance animation
                 brick.setScale(0);
                 brick.setRotation(Phaser.Math.FloatBetween(-0.1, 0.1));
-                const delay = row * 80 + col * 30 + Phaser.Math.Between(0, 40);
+                const delay = row * 40 + col * 15 + Phaser.Math.Between(0, 20);
                 this.tweens.add({
                     targets: brick,
                     scaleX: 1,
                     scaleY: 1,
                     rotation: 0,
                     ease: 'Back.Out',
-                    duration: 600,
+                    duration: 150,
                     delay,
                 });
             }
@@ -379,7 +373,6 @@ export class Game extends Scene {
         emitBrickShards(this, bx, by, tint);
 
         this.score += POINTS_PER_BRICK;
-        this.scoreText.setText(`Score: ${this.score}`);
 
         const coins = Math.floor(POINTS_PER_BRICK * this.coinMultiplier);
         this.coinsEarned += coins;
