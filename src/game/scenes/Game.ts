@@ -23,20 +23,54 @@ const BOMB_INITIAL_SPEED = 180;
 const BOMB_ACCEL = 1400;
 const ROW_TINTS = [
     0xff4455, 0xff6633, 0xff9922, 0xffcc11, 0x44dd44, 0x22ccaa, 0x4499ff, 0x6655ff, 0x9944ff,
-    0xff44cc,
+    0xff44cc, 0xff4455, 0xff6633,
 ];
-const HEART_SHAPE = [
-    [0, 0, 1, 1, 0, 0, 1, 1, 0, 0],
-    [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-    [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-    [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-    [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
-    [0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
+const LEVEL_SHAPES = [
+    // Level 1: Heart
+    [
+        [0, 0, 1, 1, 0, 0, 1, 1, 0, 0],
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+        [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
+    ],
+    // Level 2: Space Invader (80 bricks)
+    [
+        [0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+        [1, 1, 1, 0, 1, 1, 0, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 0, 1, 1, 1, 1, 1, 1, 0, 1],
+        [1, 0, 1, 0, 1, 1, 0, 1, 0, 1],
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+        [0, 0, 1, 1, 0, 0, 1, 1, 0, 0],
+        [0, 1, 1, 0, 0, 0, 0, 1, 1, 0],
+    ],
+    // Level 3: Skull (90 bricks)
+    [
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 0, 0, 1, 1, 0, 0, 1, 1],
+        [1, 1, 0, 0, 1, 1, 0, 0, 1, 1],
+        [1, 1, 1, 1, 0, 0, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [0, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+        [0, 0, 1, 0, 1, 1, 0, 1, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+    ],
 ];
+const MAX_LEVEL = LEVEL_SHAPES.length;
 const BALL_TINT = 0xffeb3b;
 const PADDLE_TINT = 0x00e5ff;
 
@@ -82,7 +116,8 @@ export class Game extends Scene {
         super('Game');
     }
 
-    create() {
+    create(data?: { level?: number }) {
+        this.level = data?.level ?? 1;
         const up = loadProgress().upgrades;
 
         this.lives = 1 + up.extraLives;
@@ -249,6 +284,17 @@ export class Game extends Scene {
         this.state = 'idle';
         this.paddleBroken = false;
         this.face.reset(this.time.now);
+
+        const devInput = document.getElementById('dev-level') as HTMLInputElement | null;
+        if (devInput) {
+            const handler = (e: KeyboardEvent) => {
+                if (e.key !== 'Enter') return;
+                const num = parseInt(devInput.value, 10);
+                if (num >= 1 && num <= MAX_LEVEL) this.jumpToLevel(num);
+            };
+            devInput.addEventListener('keydown', handler);
+            this.events.once('shutdown', () => devInput.removeEventListener('keydown', handler));
+        }
     }
 
     update() {
@@ -386,9 +432,10 @@ export class Game extends Scene {
         const totalW = BRICK_COLS * BRICK_W + (BRICK_COLS - 1) * BRICK_PAD;
         const startX = (this.scale.width - totalW) / 2 + BRICK_W / 2;
 
-        for (let row = 0; row < HEART_SHAPE.length; row++) {
+        const shape = LEVEL_SHAPES[this.level - 1];
+        for (let row = 0; row < shape.length; row++) {
             for (let col = 0; col < BRICK_COLS; col++) {
-                if (!HEART_SHAPE[row][col]) continue;
+                if (!shape[row][col]) continue;
                 const x = startX + col * (BRICK_W + BRICK_PAD);
                 const y = BRICK_TOP_Y + row * (BRICK_H + BRICK_PAD);
                 const brick = this.bricks.create(x, y, 'brick') as Physics.Arcade.Image;
@@ -458,6 +505,18 @@ export class Game extends Scene {
         (this.paddle.body as Physics.Arcade.Body).enable = true;
         this.face.gfx.setVisible(true);
         this.hpBar.setVisible(true);
+    }
+
+    private advanceLevel() {
+        this.jumpToLevel(this.level + 1);
+    }
+
+    private jumpToLevel(level: number) {
+        this.level = level;
+        this.bricks.clear(true, true);
+        this.createBricks();
+        this.bricks.refresh();
+        this.resetBall();
     }
 
     private updatePaddleTint() {
@@ -572,10 +631,14 @@ export class Game extends Scene {
         });
 
         if (this.bricks.countActive() === 0) {
-            this.state = 'win';
-            this.stopBall();
-            this.face.onWin();
-            this.showEndScreen();
+            if (this.level < MAX_LEVEL) {
+                this.advanceLevel();
+            } else {
+                this.state = 'win';
+                this.stopBall();
+                this.face.onWin();
+                this.showEndScreen();
+            }
         }
     }
 
@@ -761,7 +824,9 @@ export class Game extends Scene {
             hit.on('pointerdown', onClick);
         };
 
-        createEndBtn(cx - 100, 'Play Again', () => this.scene.restart());
+        createEndBtn(cx - 100, 'Play Again', () =>
+            this.scene.restart(this.state === 'gameOver' ? { level: this.level } : undefined),
+        );
         createEndBtn(cx + 100, 'Upgrades', () => this.scene.start('Upgrade'));
     }
 }
