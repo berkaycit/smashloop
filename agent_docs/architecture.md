@@ -10,7 +10,7 @@
 ## Scenes
 
 - `scenes/Game.ts` -- Main breakout gameplay: paddle, ball, bricks, collisions, HP, bullets, end screen overlay
-- `scenes/Upgrade.ts` -- Skill tree: visual node graph for purchasing upgrades with prerequisite gating
+- `scenes/Upgrade.ts` -- Skill tree: visual node graph with radial vignette background, panel-styled header/buttons, state-driven node animations, sectioned tooltips, purchase particle effects, and animated progress rings
 
 ## Scene Structure (Game.ts)
 
@@ -38,7 +38,7 @@ All game logic lives in one scene class. No separate entity classes.
 - `particles.ts` -- Disposable particle emitters for brick/paddle destruction (sparks, shards)
 - `persistence.ts` -- localStorage save/load for GameProgress (coins, upgrade levels). Merges saved data with defaults for forward-compatibility.
 - `upgrades.ts` -- Upgrade definitions (key, name, maxLevel, cost scaling, effect labels, icon, position, prerequisites) and cost calculation
-- `skill-tree-render.ts` -- Skill tree node rendering: state colors, rounded-rect nodes, connection lines, node containers
+- `skill-tree-render.ts` -- Skill tree node rendering: circular nodes with glow and progress rings, bezier curved connections (solid with glow for unlocked, dashed for locked), state color system, node container factory
 - `ui-utils.ts` -- Shared UI constants and helpers: `FONT_FAMILY`, `drawPanel` (rounded-rect with border), `upgradeLevel` (typed accessor)
 
 ## Runtime Textures
