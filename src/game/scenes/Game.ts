@@ -1,5 +1,8 @@
-import { GameObjects, Physics, Scene } from 'phaser';
+import Phaser, { GameObjects, Physics, Scene } from 'phaser';
 import { emitBrickShards, emitImpactSparks } from '../particles';
+import { createBallTrail, type BallTrail } from '../ball-trail';
+import { ballImpactFx, createBgFlash, createConfettiEmitter } from '../visual-fx';
+import { createPaddleFace, type PaddleFace } from '../paddle-face';
 
 type GameState = 'idle' | 'playing' | 'gameOver' | 'win';
 
@@ -46,16 +49,8 @@ export class Game extends Scene {
     private lives = INITIAL_LIVES;
     private ballSpeed = INITIAL_BALL_SPEED;
 
-    private ballTrail!: GameObjects.Graphics;
-    private trailRing: number[] = [];
-    private trailIndex = 0;
-    private faceGfx!: GameObjects.Graphics;
-    private lastBlinkTime = 0;
-    private eyeScaleY = 1;
-    private blinkTween: Phaser.Tweens.Tween | null = null;
-    private mouthCurve = 0.3;
-    private lastPaddleHitTime = 0;
-    private prevPaddleX = 0;
+    private trail!: BallTrail;
+    private face!: PaddleFace;
     private confettiEmitter!: GameObjects.Particles.ParticleEmitter;
     private bgFlash!: GameObjects.Rectangle;
 
@@ -69,15 +64,8 @@ export class Game extends Scene {
         const { width, height } = this.scale;
         const centerX = width / 2;
 
-        // Background flash overlay (depth 0)
-        this.bgFlash = this.add.rectangle(centerX, height / 2, width, height, 0xffffff, 0);
-        this.bgFlash.setDepth(0);
-
-        // Ball trail (depth 1)
-        this.ballTrail = this.add.graphics();
-        this.ballTrail.setDepth(1);
-        this.trailRing = [];
-        this.trailIndex = 0;
+        this.bgFlash = createBgFlash(this);
+        this.trail = createBallTrail(this);
 
         this.paddle = this.physics.add.image(centerX, height - 48, 'paddle');
         const paddleBody = this.paddle.body as Physics.Arcade.Body;
@@ -107,21 +95,8 @@ export class Game extends Scene {
             },
         );
 
-        // Confetti emitter (depth 6)
-        this.confettiEmitter = this.add.particles(0, 0, 'particle', {
-            speed: { min: 80, max: 200 },
-            angle: { min: 220, max: 320 },
-            lifespan: 500,
-            scale: { start: 1.2, end: 0 },
-            alpha: { start: 1, end: 0 },
-            tint: [0xff4455, 0xff9922, 0xffcc11, 0x44dd44, 0x4499ff, 0x9944ff],
-            emitting: false,
-        });
-        this.confettiEmitter.setDepth(6);
-
-        // Paddle face graphics (depth 5)
-        this.faceGfx = this.add.graphics();
-        this.faceGfx.setDepth(5);
+        this.confettiEmitter = createConfettiEmitter(this);
+        this.face = createPaddleFace(this);
 
         // UI text (depth 10)
         this.scoreText = this.add
@@ -160,12 +135,7 @@ export class Game extends Scene {
         this.lives = INITIAL_LIVES;
         this.ballSpeed = INITIAL_BALL_SPEED;
         this.state = 'idle';
-        this.prevPaddleX = this.paddle.x;
-        this.lastBlinkTime = this.time.now;
-        this.lastPaddleHitTime = 0;
-        this.mouthCurve = 0.3;
-        this.eyeScaleY = 1;
-        this.blinkTween = null;
+        this.face.reset(this.time.now);
     }
 
     update() {
@@ -174,91 +144,25 @@ export class Game extends Scene {
             this.ball.y = this.paddle.y - BALL_OFFSET_Y;
         }
 
-        // Paddle squash & stretch
-        const dx = this.paddle.x - this.prevPaddleX;
-        const stretch = Phaser.Math.Clamp(1 + Math.abs(dx) * 0.008, 1.0, 1.3);
-        this.paddle.setScale(stretch, 1 / stretch);
-        this.prevPaddleX = this.paddle.x;
-
-        // Ball stretch, rotation, and trail (playing state only)
         if (this.state === 'playing') {
-            const vx = this.ballBody.velocity.x;
-            const vy = this.ballBody.velocity.y;
-            const speed = this.ballBody.speed;
+            const ballBody = this.ballBody;
+            const speed = ballBody.speed;
 
             if (speed > 0) {
-                this.ball.setRotation(Math.atan2(vy, vx));
+                this.ball.setRotation(Math.atan2(ballBody.velocity.y, ballBody.velocity.x));
                 const ballStretch = Phaser.Math.Clamp(1 + speed * 0.0004, 1.0, 1.4);
                 this.ball.setScale(ballStretch, 1 / ballStretch);
             }
 
-            // Ball trail (ring buffer: [x0, y0, x1, y1, ...], max 10 points = 20 values)
-            const ri = this.trailIndex * 2;
-            this.trailRing[ri] = this.ball.x;
-            this.trailRing[ri + 1] = this.ball.y;
-            this.trailIndex = (this.trailIndex + 1) % 10;
-            this.drawTrail();
+            this.trail.record(this.ball.x, this.ball.y);
+            this.trail.draw();
         }
 
-        if (this.time.now - this.lastBlinkTime > Phaser.Math.Between(2000, 5000)) {
-            this.lastBlinkTime = this.time.now;
-            this.triggerBlink();
-        }
-
-        // Mouth expression based on ball distance
-        if (this.state === 'playing') {
-            const ballDistY = this.ball.y - this.paddle.y;
-            const timeSinceHit = this.time.now - this.lastPaddleHitTime;
-            if (timeSinceHit < 500) {
-                this.mouthCurve = Phaser.Math.Linear(1, 0.3, timeSinceHit / 500);
-            } else {
-                // ballDistY is negative when ball is above paddle
-                const distFactor = Phaser.Math.Clamp(-ballDistY / 600, 0, 1);
-                this.mouthCurve = Phaser.Math.Linear(0, 0.3, distFactor);
-            }
-        } else if (this.state === 'idle') {
-            this.mouthCurve = 0.3;
-        }
-
-        this.drawFace();
+        this.face.update(this.paddle, this.ball, this.state, this.time.now);
     }
 
     private get ballBody(): Physics.Arcade.Body {
         return this.ball.body as Physics.Arcade.Body;
-    }
-
-    private ballImpactFx(bgAlpha: number, bgDuration: number) {
-        this.ball.setTint(0xffffff);
-        this.time.delayedCall(60, () => this.ball.setTint(BALL_TINT));
-
-        this.tweens.add({
-            targets: this.ball,
-            scaleX: 1.5,
-            scaleY: 1.5,
-            duration: 80,
-            yoyo: true,
-            ease: 'Cubic.Out',
-        });
-
-        this.bgFlash.setAlpha(bgAlpha);
-        this.tweens.add({
-            targets: this.bgFlash,
-            alpha: 0,
-            duration: bgDuration,
-            ease: 'Linear',
-        });
-    }
-
-    private triggerBlink(hold = 0) {
-        if (this.blinkTween?.isPlaying()) return;
-        this.blinkTween = this.tweens.add({
-            targets: this,
-            eyeScaleY: 0,
-            duration: hold ? 60 : 80,
-            yoyo: true,
-            ease: 'Cubic.Out',
-            hold,
-        });
     }
 
     private generateTextures() {
@@ -323,7 +227,7 @@ export class Game extends Scene {
         this.ballSpeed = INITIAL_BALL_SPEED;
         this.state = 'idle';
         this.messageText.setText('Click to Launch').setVisible(true);
-        this.clearTrail();
+        this.trail.clear();
         this.ball.setScale(1);
         this.ball.setRotation(0);
         this.ball.setTint(BALL_TINT);
@@ -340,7 +244,7 @@ export class Game extends Scene {
     private stopBall(message: string) {
         this.ballBody.setVelocity(0);
         this.messageText.setText(message).setVisible(true);
-        this.clearTrail();
+        this.trail.clear();
     }
 
     private hitPaddle(
@@ -354,11 +258,9 @@ export class Game extends Scene {
         const speed = this.ballBody.speed || this.ballSpeed;
         this.ballBody.setVelocity(Math.cos(rad) * speed, Math.sin(rad) * speed);
 
-        this.ballImpactFx(0.03, 150);
+        ballImpactFx(this, this.ball, this.bgFlash, BALL_TINT, 0.03, 150);
         this.confettiEmitter.emitParticleAt(this.ball.x, this.paddle.y, 8);
-        this.lastPaddleHitTime = this.time.now;
-        this.mouthCurve = 1;
-        this.triggerBlink(150);
+        this.face.onPaddleHit(this.time.now);
     }
 
     private hitBrick(
@@ -388,92 +290,12 @@ export class Game extends Scene {
             );
         }
 
-        this.ballImpactFx(0.06, 200);
+        ballImpactFx(this, this.ball, this.bgFlash, BALL_TINT, 0.06, 200);
 
         if (this.bricks.countActive() === 0) {
             this.state = 'win';
             this.stopBall('You Win!\nClick to Restart');
-            this.mouthCurve = 1;
-        }
-    }
-
-    private clearTrail() {
-        this.trailRing = [];
-        this.trailIndex = 0;
-        this.ballTrail.clear();
-    }
-
-    private drawTrail() {
-        this.ballTrail.clear();
-        const count = Math.min(this.trailRing.length / 2, 10);
-        if (count < 2) return;
-
-        for (let i = 1; i < count; i++) {
-            const pi = ((this.trailIndex - count + i - 1 + 10) % 10) * 2;
-            const ci = ((this.trailIndex - count + i + 10) % 10) * 2;
-            const t = i / count;
-            this.ballTrail.lineStyle(t * 3, BALL_TINT, t * 0.5);
-            this.ballTrail.beginPath();
-            this.ballTrail.moveTo(this.trailRing[pi], this.trailRing[pi + 1]);
-            this.ballTrail.lineTo(this.trailRing[ci], this.trailRing[ci + 1]);
-            this.ballTrail.strokePath();
-        }
-    }
-
-    private drawFace() {
-        this.faceGfx.clear();
-
-        const px = this.paddle.x;
-        const py = this.paddle.y;
-
-        const eyeSpacing = 12;
-        const eyeR = 7;
-        const pupilR = 3;
-        const leftEyeX = px - eyeSpacing;
-        const rightEyeX = px + eyeSpacing;
-        const eyeY = py - 4;
-
-        if (this.eyeScaleY < 0.2) {
-            // Blink: horizontal lines
-            this.faceGfx.lineStyle(2, 0xffffff, 1);
-            this.faceGfx.beginPath();
-            this.faceGfx.moveTo(leftEyeX - 4, eyeY);
-            this.faceGfx.lineTo(leftEyeX + 4, eyeY);
-            this.faceGfx.strokePath();
-            this.faceGfx.beginPath();
-            this.faceGfx.moveTo(rightEyeX - 4, eyeY);
-            this.faceGfx.lineTo(rightEyeX + 4, eyeY);
-            this.faceGfx.strokePath();
-        } else {
-            // Open eyes (white circles)
-            this.faceGfx.fillStyle(0xffffff, 1);
-            this.faceGfx.fillCircle(leftEyeX, eyeY, eyeR);
-            this.faceGfx.fillCircle(rightEyeX, eyeY, eyeR);
-
-            // Pupils tracking ball
-            const angle = Math.atan2(this.ball.y - eyeY, this.ball.x - px);
-            const maxOffset = 3;
-            const ox = Math.cos(angle) * maxOffset;
-            const oy = Math.sin(angle) * maxOffset;
-
-            this.faceGfx.fillStyle(0x000000, 1);
-            this.faceGfx.fillCircle(leftEyeX + ox, eyeY + oy, pupilR);
-            this.faceGfx.fillCircle(rightEyeX + ox, eyeY + oy, pupilR);
-        }
-
-        // Mouth
-        this.faceGfx.lineStyle(1.5, 0xffffff, 0.9);
-        if (this.mouthCurve > 0.15) {
-            // Smile arc: center at paddle center, radius 8, 20-160 degrees
-            this.faceGfx.beginPath();
-            this.faceGfx.arc(px, py, 8, Phaser.Math.DegToRad(20), Phaser.Math.DegToRad(160));
-            this.faceGfx.strokePath();
-        } else {
-            // Neutral: straight line
-            this.faceGfx.beginPath();
-            this.faceGfx.moveTo(px - 6, py + 3);
-            this.faceGfx.lineTo(px + 6, py + 3);
-            this.faceGfx.strokePath();
+            this.face.onWin();
         }
     }
 
@@ -486,7 +308,7 @@ export class Game extends Scene {
         } else {
             this.state = 'gameOver';
             this.stopBall('Game Over\nClick to Restart');
-            this.mouthCurve = 0;
+            this.face.onGameOver();
         }
     }
 }
