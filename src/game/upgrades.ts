@@ -6,6 +6,10 @@ export interface UpgradeDef {
     baseCost: number;
     costScale: number;
     effectLabel: (level: number) => string;
+    icon: string;
+    x: number;
+    y: number;
+    prerequisites: string[];
 }
 
 export const UPGRADES: UpgradeDef[] = [
@@ -17,6 +21,10 @@ export const UPGRADES: UpgradeDef[] = [
         baseCost: 15,
         costScale: 1.5,
         effectLabel: (l) => `HP: ${5 + l * 3}`,
+        icon: 'shield',
+        x: 512,
+        y: 120,
+        prerequisites: [],
     },
     {
         key: 'extraLives',
@@ -26,6 +34,10 @@ export const UPGRADES: UpgradeDef[] = [
         baseCost: 50,
         costScale: 2.5,
         effectLabel: (l) => `Lives: ${1 + l}`,
+        icon: 'heart',
+        x: 712,
+        y: 380,
+        prerequisites: ['paddleHp'],
     },
     {
         key: 'paddleWidth',
@@ -35,6 +47,10 @@ export const UPGRADES: UpgradeDef[] = [
         baseCost: 20,
         costScale: 1.6,
         effectLabel: (l) => `Width: ${80 + l * 20}px`,
+        icon: 'resize',
+        x: 312,
+        y: 380,
+        prerequisites: ['paddleHp'],
     },
     {
         key: 'shooting',
@@ -44,6 +60,10 @@ export const UPGRADES: UpgradeDef[] = [
         baseCost: 40,
         costScale: 1.5,
         effectLabel: (l) => (l === 0 ? 'Locked' : `Ammo: ${l * 4}`),
+        icon: 'bullet',
+        x: 312,
+        y: 640,
+        prerequisites: ['paddleWidth'],
     },
     {
         key: 'coinMultiplier',
@@ -53,6 +73,10 @@ export const UPGRADES: UpgradeDef[] = [
         baseCost: 25,
         costScale: 1.7,
         effectLabel: (l) => `x${1 + l * 0.5}`,
+        icon: 'coin',
+        x: 712,
+        y: 640,
+        prerequisites: ['extraLives'],
     },
 ];
 

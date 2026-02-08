@@ -1,7 +1,20 @@
 import { Scene } from 'phaser';
 import { loadProgress, saveProgress } from '../persistence';
+import { FONT_FAMILY, drawPanel, upgradeLevel } from '../ui-utils';
 import { UPGRADES, upgradeCost } from '../upgrades';
+import type { UpgradeDef } from '../upgrades';
 import type { GameProgress } from '../persistence';
+import {
+    getNodeState,
+    stateColor,
+    drawNodeBg,
+    drawConnection,
+    connectionColor,
+    createNodeContainer,
+} from '../skill-tree-render';
+
+const HOVER_BORDER = 0x60a5fa;
+const UPGRADE_MAP = new Map(UPGRADES.map((u) => [u.key, u]));
 
 export class Upgrade extends Scene {
     constructor() {
@@ -10,133 +23,246 @@ export class Upgrade extends Scene {
 
     create() {
         const { width } = this.scale;
-        const cx = width / 2;
         const progress = loadProgress();
-
         const dpr = window.devicePixelRatio;
+
+        this.generateIcons();
+
+        // Coins
         this.add
-            .text(cx, 30, `Coins: ${progress.coins}`, {
-                fontSize: '28px',
+            .text(20, 24, `Total Coin: ${progress.coins}`, {
+                fontFamily: FONT_FAMILY,
+                fontSize: '22px',
                 color: '#ffcc11',
                 fontStyle: 'bold',
             })
-            .setResolution(dpr)
-            .setOrigin(0.5);
+            .setResolution(dpr);
 
+        // Back button
         this.createButton(width - 80, 30, 'BACK', () => {
             this.scene.start('Game');
         });
 
-        const cardStartY = 100;
-        const cardH = 80;
-        const cardGap = 20;
+        // Connections (depth 1)
+        this.drawConnections(progress);
 
-        for (let i = 0; i < UPGRADES.length; i++) {
-            const def = UPGRADES[i];
-            const y = cardStartY + i * (cardH + cardGap);
-            this.createUpgradeCard(cx, y, cardH, def, progress);
+        // Nodes (depth 2)
+        for (const def of UPGRADES) {
+            const level = upgradeLevel(progress, def.key);
+            const prereqsMet = def.prerequisites.every((k) => upgradeLevel(progress, k) >= 1);
+            const state = getNodeState(level, def.maxLevel, prereqsMet);
+            const container = createNodeContainer(this, def, level, state, progress.coins);
+            this.setupInteraction(container, def, progress, state);
         }
     }
 
-    private createUpgradeCard(
-        cx: number,
-        y: number,
-        h: number,
-        def: (typeof UPGRADES)[number],
-        progress: GameProgress,
-    ) {
-        const cardW = 600;
-        const level = progress.upgrades[def.key as keyof typeof progress.upgrades];
-        const isMaxed = level >= def.maxLevel;
-        const cost = isMaxed ? 0 : upgradeCost(def, level);
-        const canAfford = !isMaxed && progress.coins >= cost;
+    private drawConnections(progress: GameProgress) {
+        const g = this.add.graphics();
+        g.setDepth(1);
 
-        this.add.rectangle(cx, y + h / 2, cardW, h, 0x222244, 1);
+        for (const def of UPGRADES) {
+            for (const prereqKey of def.prerequisites) {
+                const prereq = UPGRADE_MAP.get(prereqKey)!;
+                const srcLevel = upgradeLevel(progress, prereq.key);
+                const tgtLevel = upgradeLevel(progress, def.key);
+                const color = connectionColor(srcLevel, tgtLevel);
 
-        const dpr = window.devicePixelRatio;
-        this.add
-            .text(cx - cardW / 2 + 20, y + 10, def.name, {
-                fontSize: '20px',
-                color: '#ffffff',
-                fontStyle: 'bold',
-            })
-            .setResolution(dpr)
-            .setOrigin(0, 0);
+                // Offset start/end to node edges
+                const angle = Math.atan2(def.y - prereq.y, def.x - prereq.x);
+                const startX = prereq.x + Math.cos(angle) * 40;
+                const startY = prereq.y + Math.sin(angle) * 40;
+                const endX = def.x - Math.cos(angle) * 40;
+                const endY = def.y - Math.sin(angle) * 40;
 
-        this.add
-            .text(cx - cardW / 2 + 20, y + 38, `${def.description}`, {
-                fontSize: '14px',
-                color: '#aaaacc',
-            })
-            .setResolution(dpr)
-            .setOrigin(0, 0);
-
-        this.add
-            .text(cx + 60, y + 12, `Lv ${level}/${def.maxLevel}`, {
-                fontSize: '16px',
-                color: '#88aaff',
-            })
-            .setResolution(dpr)
-            .setOrigin(0, 0);
-
-        this.add
-            .text(cx + 60, y + 36, def.effectLabel(level), {
-                fontSize: '14px',
-                color: '#66dd88',
-            })
-            .setResolution(dpr)
-            .setOrigin(0, 0);
-
-        const btnX = cx + cardW / 2 - 70;
-        const btnY = y + h / 2;
-
-        if (isMaxed) {
-            this.add
-                .text(btnX, btnY, 'MAX', {
-                    fontSize: '18px',
-                    color: '#888888',
-                    fontStyle: 'bold',
-                })
-                .setResolution(dpr)
-                .setOrigin(0.5);
-        } else {
-            const btnColor = canAfford ? 0x44aa44 : 0x555555;
-            const bg = this.add.rectangle(btnX, btnY, 110, 36, btnColor, 1);
-            this.add
-                .text(btnX, btnY, `${cost} coins`, {
-                    fontSize: '16px',
-                    color: canAfford ? '#ffffff' : '#888888',
-                })
-                .setResolution(dpr)
-                .setOrigin(0.5);
-
-            if (canAfford) {
-                bg.setInteractive();
-                bg.on('pointerover', () => bg.setFillStyle(0x66cc66));
-                bg.on('pointerout', () => bg.setFillStyle(0x44aa44));
-                bg.on('pointerdown', () => {
-                    const p = loadProgress();
-                    const key = def.key as keyof typeof p.upgrades;
-                    if (p.coins >= cost && p.upgrades[key] < def.maxLevel) {
-                        p.coins -= cost;
-                        p.upgrades[key]++;
-                        saveProgress(p);
-                        this.scene.restart();
-                    }
-                });
+                drawConnection(g, startX, startY, endX, endY, color);
             }
         }
+    }
+
+    private setupInteraction(
+        container: Phaser.GameObjects.Container,
+        def: UpgradeDef,
+        progress: GameProgress,
+        state: string,
+    ) {
+        const hitArea = this.add.rectangle(0, 0, 80, 80, 0x000000, 0);
+        container.add(hitArea);
+        hitArea.setInteractive({ useHandCursor: state === 'available' || state === 'unlocked' });
+
+        const dpr = window.devicePixelRatio;
+        let tooltipContainer: Phaser.GameObjects.Container | null = null;
+
+        hitArea.on('pointerover', () => {
+            const bg = container.getByName('bg') as Phaser.GameObjects.Graphics;
+            if (bg) drawNodeBg(bg, HOVER_BORDER, 3);
+
+            const level = upgradeLevel(progress, def.key);
+            const isMaxed = level >= def.maxLevel;
+            const cost = isMaxed ? '' : `Cost: ${upgradeCost(def, level)}`;
+            const effect = def.effectLabel(level);
+            const lines = [def.description, effect, cost].filter(Boolean).join('\n');
+
+            const text = this.add
+                .text(0, 0, lines, {
+                    fontFamily: FONT_FAMILY,
+                    fontSize: '15px',
+                    color: '#ccccee',
+                    align: 'center',
+                    lineSpacing: 4,
+                })
+                .setResolution(dpr)
+                .setOrigin(0.5, 0);
+
+            const padX = 12;
+            const padY = 8;
+            const tooltipBg = this.add.graphics();
+            drawPanel(
+                tooltipBg,
+                -text.width / 2 - padX,
+                -padY,
+                text.width + padX * 2,
+                text.height + padY * 2,
+                8,
+                undefined,
+                0.95,
+            );
+
+            tooltipContainer = this.add.container(def.x, def.y + 64, [tooltipBg, text]);
+            tooltipContainer.setDepth(10);
+        });
+
+        hitArea.on('pointerout', () => {
+            const bg = container.getByName('bg') as Phaser.GameObjects.Graphics;
+            const color = stateColor(
+                getNodeState(upgradeLevel(progress, def.key), def.maxLevel, true),
+            );
+            if (bg) drawNodeBg(bg, color);
+
+            if (tooltipContainer) {
+                tooltipContainer.destroy(true);
+                tooltipContainer = null;
+            }
+        });
+
+        hitArea.on('pointerdown', () => {
+            if (state === 'locked' || state === 'maxed') return;
+            this.purchase(def, container);
+        });
+    }
+
+    private purchase(def: UpgradeDef, container: Phaser.GameObjects.Container) {
+        const p = loadProgress();
+        const level = upgradeLevel(p, def.key);
+        const cost = upgradeCost(def, level);
+
+        if (p.coins < cost || level >= def.maxLevel) return;
+
+        p.coins -= cost;
+        (p.upgrades as Record<string, number>)[def.key]++;
+        saveProgress(p);
+
+        this.tweens.add({
+            targets: container,
+            scaleX: 1.15,
+            scaleY: 1.15,
+            duration: 75,
+            yoyo: true,
+            onComplete: () => this.scene.restart(),
+        });
     }
 
     private createButton(x: number, y: number, label: string, onClick: () => void) {
         const bg = this.add.rectangle(x, y, 120, 36, 0x334455, 1).setInteractive();
         this.add
-            .text(x, y, label, { fontSize: '18px', color: '#ffffff', fontStyle: 'bold' })
+            .text(x, y, label, {
+                fontFamily: FONT_FAMILY,
+                fontSize: '18px',
+                color: '#ffffff',
+                fontStyle: 'bold',
+            })
             .setResolution(window.devicePixelRatio)
             .setOrigin(0.5);
 
         bg.on('pointerover', () => bg.setFillStyle(0x4499ff));
         bg.on('pointerout', () => bg.setFillStyle(0x334455));
         bg.on('pointerdown', onClick);
+    }
+
+    private generateIcons() {
+        const g = this.add.graphics();
+        const gen = (draw: () => void, key: string, w: number, h: number) => {
+            if (this.textures.exists(key)) return;
+            draw();
+            g.generateTexture(key, w, h);
+            g.clear();
+        };
+
+        // Shield (blue)
+        gen(
+            () => {
+                g.fillStyle(0x3b82f6);
+                g.fillRoundedRect(6, 2, 20, 24, { tl: 4, tr: 4, bl: 10, br: 10 });
+                g.fillStyle(0x60a5fa);
+                g.fillRect(13, 6, 6, 10);
+            },
+            'icon-shield',
+            32,
+            28,
+        );
+
+        // Heart (red)
+        gen(
+            () => {
+                g.fillStyle(0xef4444);
+                g.fillCircle(10, 10, 7);
+                g.fillCircle(22, 10, 7);
+                g.fillTriangle(3, 12, 29, 12, 16, 26);
+            },
+            'icon-heart',
+            32,
+            28,
+        );
+
+        // Resize arrows (cyan)
+        gen(
+            () => {
+                g.fillStyle(0x22d3ee);
+                g.fillRect(4, 10, 24, 4);
+                g.fillTriangle(0, 12, 8, 6, 8, 18);
+                g.fillTriangle(32, 12, 24, 6, 24, 18);
+            },
+            'icon-resize',
+            32,
+            24,
+        );
+
+        // Bullet (yellow)
+        gen(
+            () => {
+                g.fillStyle(0xfbbf24);
+                g.fillRect(12, 10, 8, 16);
+                g.fillTriangle(12, 10, 20, 10, 16, 2);
+            },
+            'icon-bullet',
+            32,
+            28,
+        );
+
+        // Coin (gold)
+        gen(
+            () => {
+                g.fillStyle(0xf59e0b);
+                g.fillCircle(14, 14, 12);
+                g.fillStyle(0xd97706);
+                g.fillCircle(14, 14, 8);
+                g.fillStyle(0xf59e0b);
+                g.fillRect(12, 8, 4, 12);
+            },
+            'icon-coin',
+            28,
+            28,
+        );
+
+        g.destroy();
     }
 }

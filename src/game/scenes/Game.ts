@@ -4,6 +4,7 @@ import { createBallTrail, type BallTrail } from '../ball-trail';
 import { ballImpactFx, createBgFlash, createConfettiEmitter } from '../visual-fx';
 import { createPaddleFace, type PaddleFace } from '../paddle-face';
 import { loadProgress, saveProgress } from '../persistence';
+import { FONT_FAMILY, drawPanel } from '../ui-utils';
 
 type GameState = 'idle' | 'playing' | 'gameOver' | 'win';
 
@@ -44,6 +45,7 @@ export class Game extends Scene {
     private bricks!: Physics.Arcade.StaticGroup;
     private livesText!: GameObjects.Text;
     private messageText!: GameObjects.Text;
+    private messageBg!: GameObjects.Graphics;
     private coinText!: GameObjects.Text;
     private ammoText!: GameObjects.Text;
     private score = 0;
@@ -138,29 +140,42 @@ export class Game extends Scene {
         // UI text (depth 10)
         const dpr = window.devicePixelRatio;
         this.livesText = this.add
-            .text(width - 16, 16, `Lives: ${this.lives}`, { fontSize: '20px', color: '#ffffff' })
+            .text(width - 16, 16, `Lives: ${this.lives}`, {
+                fontFamily: FONT_FAMILY,
+                fontSize: '20px',
+                color: '#ffffff',
+            })
             .setResolution(dpr)
             .setOrigin(1, 0)
             .setDepth(10);
         this.coinText = this.add
-            .text(16, 16, 'Coins: 0', { fontSize: '20px', color: '#ffd700' })
+            .text(16, 16, 'Coin: 0', {
+                fontFamily: FONT_FAMILY,
+                fontSize: '20px',
+                color: '#ffd700',
+            })
             .setResolution(dpr)
             .setDepth(10);
         this.ammoText = this.add
-            .text(16, 42, `Ammo: ${this.ammo}`, { fontSize: '16px', color: '#aaaaff' })
+            .text(16, 42, `Ammo: ${this.ammo}`, {
+                fontFamily: FONT_FAMILY,
+                fontSize: '16px',
+                color: '#aaaaff',
+            })
             .setResolution(dpr)
             .setDepth(10)
             .setVisible(this.maxAmmo > 0);
+        this.messageBg = this.add.graphics().setDepth(9);
         this.messageText = this.add
             .text(centerX, height / 2, 'Click to Launch', {
+                fontFamily: FONT_FAMILY,
                 fontSize: '32px',
                 color: '#ffffff',
-                backgroundColor: 'rgba(0,0,0,0.75)',
-                padding: { x: 16, y: 10 },
             })
             .setResolution(dpr)
             .setOrigin(0.5)
             .setDepth(10);
+        this.drawMessageBg();
 
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
             if (this.state !== 'idle' && this.state !== 'playing') return;
@@ -255,6 +270,15 @@ export class Game extends Scene {
         g.destroy();
     }
 
+    private drawMessageBg() {
+        this.messageBg.clear().setVisible(true);
+        const padX = 24;
+        const padY = 14;
+        const w = this.messageText.width + padX * 2;
+        const h = this.messageText.height + padY * 2;
+        drawPanel(this.messageBg, this.messageText.x - w / 2, this.messageText.y - h / 2, w, h);
+    }
+
     private createBricks() {
         const totalW = BRICK_COLS * BRICK_W + (BRICK_COLS - 1) * BRICK_PAD;
         const startX = (this.scale.width - totalW) / 2 + BRICK_W / 2;
@@ -315,6 +339,7 @@ export class Game extends Scene {
         this.ballSpeed = INITIAL_BALL_SPEED;
         this.state = 'idle';
         this.messageText.setText('Click to Launch').setVisible(true);
+        this.drawMessageBg();
         this.trail.clear();
         this.ball.setScale(1);
         this.ball.setRotation(0);
@@ -343,6 +368,7 @@ export class Game extends Scene {
         this.ballBody.setVelocity(Math.cos(rad) * this.ballSpeed, Math.sin(rad) * this.ballSpeed);
         this.state = 'playing';
         this.messageText.setVisible(false);
+        this.messageBg.setVisible(false);
     }
 
     private stopBall() {
@@ -376,11 +402,15 @@ export class Game extends Scene {
 
         const coins = Math.floor(POINTS_PER_BRICK * this.coinMultiplier);
         this.coinsEarned += coins;
-        this.coinText.setText(`Coins: ${this.coinsEarned}`);
+        this.coinText.setText(`Coin: ${this.coinsEarned}`);
 
         // Floating coin text
         const coinFloat = this.add
-            .text(bx, by, `+${coins}`, { fontSize: '14px', color: '#ffd700' })
+            .text(bx, by, `+${coins}`, {
+                fontFamily: FONT_FAMILY,
+                fontSize: '14px',
+                color: '#ffd700',
+            })
             .setResolution(window.devicePixelRatio)
             .setOrigin(0.5)
             .setDepth(10);
@@ -494,6 +524,7 @@ export class Game extends Scene {
         const cy = height / 2;
 
         this.messageText.setVisible(false);
+        this.messageBg.setVisible(false);
 
         const row1Y = cy - 22;
         const row2Y = cy + 22;
@@ -501,12 +532,20 @@ export class Game extends Scene {
 
         const dpr = window.devicePixelRatio;
         const l1 = this.add
-            .text(0, row1Y, 'Coins Earned:', { fontSize: '26px', color: '#ffd700' })
+            .text(0, row1Y, 'Coin Earned:', {
+                fontFamily: FONT_FAMILY,
+                fontSize: '26px',
+                color: '#ffd700',
+            })
             .setResolution(dpr)
             .setOrigin(0, 0.5)
             .setDepth(11);
         const l2 = this.add
-            .text(0, row2Y, 'Total Coins:', { fontSize: '26px', color: '#44dd44' })
+            .text(0, row2Y, 'Total Coin:', {
+                fontFamily: FONT_FAMILY,
+                fontSize: '26px',
+                color: '#44dd44',
+            })
             .setResolution(dpr)
             .setOrigin(0, 0.5)
             .setDepth(11);
@@ -514,6 +553,7 @@ export class Game extends Scene {
         const numStartX = Math.max(l1.width, l2.width) + gap;
         const n1 = this.add
             .text(numStartX, row1Y, `${this.coinsEarned}`, {
+                fontFamily: FONT_FAMILY,
                 fontSize: '36px',
                 color: '#ffd700',
                 fontStyle: 'bold',
@@ -523,6 +563,7 @@ export class Game extends Scene {
             .setDepth(11);
         const n2 = this.add
             .text(numStartX, row2Y, `${progress.coins}`, {
+                fontFamily: FONT_FAMILY,
                 fontSize: '36px',
                 color: '#44dd44',
                 fontStyle: 'bold',
@@ -536,29 +577,43 @@ export class Game extends Scene {
         for (const t of [l1, l2, n1, n2]) t.x += offsetX;
 
         const pad = 20;
-        this.add.rectangle(cx, cy, totalW + pad * 2, 110, 0x000000, 0.75).setDepth(10);
+        const panelW = totalW + pad * 2;
+        const panelH = 110;
+        const panelBg = this.add.graphics();
+        drawPanel(panelBg, cx - panelW / 2, cy - panelH / 2, panelW, panelH);
+        panelBg.setDepth(10);
 
-        const btnStyle = {
-            fontSize: '24px',
-            color: '#ffffff',
-            backgroundColor: 'rgba(0,0,0,0.75)',
-            padding: { x: 20, y: 12 },
+        const createEndBtn = (bx: number, label: string, onClick: () => void) => {
+            const txt = this.add
+                .text(bx, cy + 100, label, {
+                    fontFamily: FONT_FAMILY,
+                    fontSize: '24px',
+                    color: '#ffffff',
+                })
+                .setResolution(dpr)
+                .setOrigin(0.5)
+                .setDepth(11);
+            const bw = txt.width + 40;
+            const bh = txt.height + 24;
+            const bx0 = bx - bw / 2;
+            const by0 = cy + 100 - bh / 2;
+            const bg = this.add.graphics();
+            drawPanel(bg, bx0, by0, bw, bh, 10);
+            bg.setDepth(10);
+            const hit = this.add.rectangle(bx, cy + 100, bw, bh, 0x000000, 0).setDepth(12);
+            hit.setInteractive({ useHandCursor: true });
+            hit.on('pointerover', () => {
+                bg.clear();
+                drawPanel(bg, bx0, by0, bw, bh, 10, 0x3a3a5a, 0.95, 0x6a6a8a);
+            });
+            hit.on('pointerout', () => {
+                bg.clear();
+                drawPanel(bg, bx0, by0, bw, bh, 10);
+            });
+            hit.on('pointerdown', onClick);
         };
 
-        this.add
-            .text(cx - 100, cy + 100, 'Play Again', btnStyle)
-            .setResolution(dpr)
-            .setOrigin(0.5)
-            .setDepth(10)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.scene.restart());
-
-        this.add
-            .text(cx + 100, cy + 100, 'Upgrades', btnStyle)
-            .setResolution(dpr)
-            .setOrigin(0.5)
-            .setDepth(10)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.scene.start('Upgrade'));
+        createEndBtn(cx - 100, 'Play Again', () => this.scene.restart());
+        createEndBtn(cx + 100, 'Upgrades', () => this.scene.start('Upgrade'));
     }
 }

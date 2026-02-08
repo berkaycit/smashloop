@@ -25,7 +25,12 @@ const DEFAULT_PROGRESS: GameProgress = {
 export function loadProgress(): GameProgress {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return structuredClone(DEFAULT_PROGRESS);
-    return JSON.parse(raw) as GameProgress;
+    const saved = JSON.parse(raw) as Partial<GameProgress>;
+    const defaults = structuredClone(DEFAULT_PROGRESS);
+    return {
+        coins: saved.coins ?? defaults.coins,
+        upgrades: { ...defaults.upgrades, ...saved.upgrades },
+    };
 }
 
 export function saveProgress(p: GameProgress): void {

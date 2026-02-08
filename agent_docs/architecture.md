@@ -10,7 +10,7 @@
 ## Scenes
 
 - `scenes/Game.ts` -- Main breakout gameplay: paddle, ball, bricks, collisions, HP, bullets, end screen overlay
-- `scenes/Upgrade.ts` -- Upgrade shop: spend coins on paddle HP, lives, width, shooting, coin multiplier
+- `scenes/Upgrade.ts` -- Skill tree: visual node graph for purchasing upgrades with prerequisite gating
 
 ## Scene Structure (Game.ts)
 
@@ -22,7 +22,7 @@ All game logic lives in one scene class. No separate entity classes.
 - `create()` -- loads upgrades from persistence, texture generation, object creation, collider setup, emitters, input binding, UI, state init
 - `update()` -- idle ball tracking, ball stretch/rotation/trail, bullet cleanup, HP bar drawing, face update
 
-**Key methods**: `generateTextures`, `createBricks`, `drawHpBar`, `resetBall`, `updatePaddleTint`, `launchBall`, `stopBall`, `fireBullet`, `destroyBrick`, `breakPaddle`, `hitPaddle`, `hitBrick`, `hitBrickWithBullet`, `loseLife`, `showEndScreen`
+**Key methods**: `generateTextures`, `createBricks`, `drawHpBar`, `drawMessageBg`, `resetBall`, `updatePaddleTint`, `launchBall`, `stopBall`, `fireBullet`, `destroyBrick`, `breakPaddle`, `hitPaddle`, `hitBrick`, `hitBrickWithBullet`, `loseLife`, `showEndScreen`
 
 **Accessor**: `ballBody` getter centralizes the `Physics.Arcade.Body` cast
 
@@ -36,12 +36,14 @@ All game logic lives in one scene class. No separate entity classes.
 - `paddle-face.ts` -- Paddle face with eyes (tracking ball), blink, mouth expressions, squash/stretch
 - `visual-fx.ts` -- Background flash overlay, confetti emitter factory, ball impact flash/scale effect
 - `particles.ts` -- Disposable particle emitters for brick/paddle destruction (sparks, shards)
-- `persistence.ts` -- localStorage save/load for GameProgress (coins, upgrade levels)
-- `upgrades.ts` -- Upgrade definitions (key, name, maxLevel, cost scaling, effect labels) and cost calculation
+- `persistence.ts` -- localStorage save/load for GameProgress (coins, upgrade levels). Merges saved data with defaults for forward-compatibility.
+- `upgrades.ts` -- Upgrade definitions (key, name, maxLevel, cost scaling, effect labels, icon, position, prerequisites) and cost calculation
+- `skill-tree-render.ts` -- Skill tree node rendering: state colors, rounded-rect nodes, connection lines, node containers
+- `ui-utils.ts` -- Shared UI constants and helpers: `FONT_FAMILY`, `drawPanel` (rounded-rect with border), `upgradeLevel` (typed accessor)
 
 ## Runtime Textures
 
-No static image assets. All textures (paddle, ball, brick, particle, spark, shard, bullet) generated via `Graphics.generateTexture()` in `create()`. Paddle texture regenerated on each restart (width varies by upgrade). Other textures guarded to generate only once.
+No static image assets. All textures (paddle, ball, brick, particle, spark, shard, bullet, skill tree icons) generated via `Graphics.generateTexture()` in `create()`. Paddle texture regenerated on each restart (width varies by upgrade). Other textures guarded to generate only once.
 
 ## Physics
 
