@@ -2,6 +2,8 @@
 
 An incremental breakout game built with Phaser 3.
 
+Play it online at [smashloop.netlify.app](https://smashloop.netlify.app).
+
 ## Setup
 
 ```bash
