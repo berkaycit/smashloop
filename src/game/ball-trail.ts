@@ -4,7 +4,6 @@ const MAX_POINTS = 10;
 const TINT = 0xffeb3b;
 
 export interface BallTrail {
-    gfx: Phaser.GameObjects.Graphics;
     record(x: number, y: number): void;
     draw(): void;
     clear(): void;
@@ -18,7 +17,6 @@ export function createBallTrail(scene: Phaser.Scene): BallTrail {
     let index = 0;
 
     return {
-        gfx,
         record(x: number, y: number) {
             const ri = index * 2;
             ring[ri] = x;
