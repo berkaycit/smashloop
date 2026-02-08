@@ -48,18 +48,6 @@ export class Upgrade extends Scene {
             .setOrigin(0, 0.5)
             .setDepth(5);
 
-        // Centered title
-        this.add
-            .text(width / 2, 32, 'UPGRADES', {
-                fontFamily: FONT_FAMILY,
-                fontSize: '24px',
-                color: '#8888bb',
-                fontStyle: 'bold',
-            })
-            .setResolution(dpr)
-            .setOrigin(0.5)
-            .setDepth(5);
-
         // Back button (styled panel)
         this.createBackButton(width - 80, 32, () => {
             this.scene.start('Game');
@@ -409,6 +397,26 @@ export class Upgrade extends Scene {
                 g.fillTriangle(12, 10, 20, 10, 16, 2);
             },
             'icon-bullet',
+            32,
+            28,
+        );
+
+        // Missile (orange-red)
+        gen(
+            () => {
+                const cx = 16;
+                // Body
+                g.fillStyle(0xf97316);
+                g.fillRect(cx - 4, 8, 8, 14);
+                // Nose cone
+                g.fillStyle(0xef4444);
+                g.fillTriangle(cx, 2, cx - 4, 8, cx + 4, 8);
+                // Tail fins
+                g.fillStyle(0xdc2626);
+                g.fillTriangle(cx - 4, 18, cx - 8, 24, cx - 4, 22);
+                g.fillTriangle(cx + 4, 18, cx + 8, 24, cx + 4, 22);
+            },
+            'icon-missile',
             32,
             28,
         );

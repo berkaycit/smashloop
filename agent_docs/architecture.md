@@ -9,20 +9,20 @@
 
 ## Scenes
 
-- `scenes/Game.ts` -- Main breakout gameplay: paddle, ball, bricks, collisions, HP, bullets, end screen overlay
+- `scenes/Game.ts` -- Main breakout gameplay: paddle, ball, bricks, collisions, HP, bullets, missiles (bombs), end screen overlay
 - `scenes/Upgrade.ts` -- Skill tree: visual node graph with radial vignette background, panel-styled header/buttons, state-driven node animations, sectioned tooltips, purchase particle effects, and animated progress rings
 
 ## Scene Structure (Game.ts)
 
 All game logic lives in one scene class. No separate entity classes.
 
-**Properties**: state (FSM), paddle, ball, bricks (static group), score/lives/coins counters, ballSpeed, paddleHp, ammo, bullets group, paddleBroken flag, UI text objects, visual effect references (trail, face, bgFlash, confetti emitter, hpBar)
+**Properties**: state (FSM), paddle, ball, bricks (static group), score/lives/coins counters, ballSpeed, paddleHp, ammo, bullets group, bombs/bombRadius/bombsGroup, paddleBroken flag, UI text objects, visual effect references (trail, face, bgFlash, confetti emitter, hpBar)
 
 **Lifecycle**:
 - `create()` -- loads upgrades from persistence, texture generation, object creation, collider setup, emitters, input binding, UI, state init
-- `update()` -- idle ball tracking, ball stretch/rotation/trail, bullet cleanup, HP bar drawing, face update
+- `update()` -- idle ball tracking, ball stretch/rotation/trail, bullet/bomb cleanup, HP bar drawing, face update
 
-**Key methods**: `generateTextures`, `createBricks`, `drawHpBar`, `drawMessageBg`, `resetBall`, `updatePaddleTint`, `launchBall`, `stopBall`, `fireBullet`, `destroyBrick`, `breakPaddle`, `hitPaddle`, `hitBrick`, `hitBrickWithBullet`, `loseLife`, `showEndScreen`
+**Key methods**: `generateTextures`, `createBricks`, `drawHpBar`, `drawMessageBg`, `resetBall`, `updatePaddleTint`, `launchBall`, `stopBall`, `fireBullet`, `throwBomb`, `hitBrickWithBomb`, `destroyBrick`, `breakPaddle`, `hitPaddle`, `hitBrick`, `hitBrickWithBullet`, `loseLife`, `showEndScreen`
 
 **Accessor**: `ballBody` getter centralizes the `Physics.Arcade.Body` cast
 
@@ -35,7 +35,7 @@ All game logic lives in one scene class. No separate entity classes.
 - `ball-trail.ts` -- Ball trail renderer using a ring buffer of positions, drawn as fading line segments
 - `paddle-face.ts` -- Paddle face with eyes (tracking ball), blink, mouth expressions, squash/stretch
 - `visual-fx.ts` -- Background flash overlay, confetti emitter factory, ball impact flash/scale effect
-- `particles.ts` -- Disposable particle emitters for brick/paddle destruction (sparks, shards)
+- `particles.ts` -- Disposable particle emitters for brick/paddle destruction (sparks, shards) and bomb explosions
 - `persistence.ts` -- localStorage save/load for GameProgress (coins, upgrade levels). Merges saved data with defaults for forward-compatibility.
 - `upgrades.ts` -- Upgrade definitions (key, name, maxLevel, cost scaling, effect labels, icon, position, prerequisites) and cost calculation
 - `skill-tree-render.ts` -- Skill tree node rendering: circular nodes with glow and progress rings, bezier curved connections (solid with glow for unlocked, dashed for locked), state color system, node container factory
@@ -43,11 +43,11 @@ All game logic lives in one scene class. No separate entity classes.
 
 ## Runtime Textures
 
-No static image assets. All textures (paddle, ball, brick, particle, spark, shard, bullet, skill tree icons) generated via `Graphics.generateTexture()` in `create()`. Paddle texture regenerated on each restart (width varies by upgrade). Other textures guarded to generate only once.
+No static image assets. All textures (paddle, ball, brick, particle, spark, shard, bullet, bomb, skill tree icons) generated via `Graphics.generateTexture()` in `create()`. Paddle texture regenerated on each restart (width varies by upgrade). Other textures guarded to generate only once.
 
 ## Physics
 
-Arcade physics with no gravity. Ball has bounce=1 and collideWorldBounds. Paddle is immovable. Bricks use a static group. Bullets in a dynamic group with no gravity. World bounds event detects ball falling off bottom edge.
+Arcade physics with no gravity. Ball has bounce=1 and collideWorldBounds. Paddle is immovable. Bricks use a static group. Bullets and bombs in dynamic groups with no gravity. Bombs have upward acceleration. World bounds event detects ball falling off bottom edge.
 
 ## Vite Config
 

@@ -6,6 +6,7 @@ export interface GameProgress {
         paddleWidth: number;
         shooting: number;
         coinMultiplier: number;
+        missile: number;
     };
 }
 
@@ -19,6 +20,7 @@ const DEFAULT_PROGRESS: GameProgress = {
         paddleWidth: 0,
         shooting: 0,
         coinMultiplier: 0,
+        missile: 0,
     },
 };
 

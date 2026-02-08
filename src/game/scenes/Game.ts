@@ -1,5 +1,5 @@
 import Phaser, { GameObjects, Physics, Scene } from 'phaser';
-import { emitBrickShards, emitImpactSparks } from '../particles';
+import { emitBrickShards, emitExplosion, emitImpactSparks } from '../particles';
 import { createBallTrail, type BallTrail } from '../ball-trail';
 import { ballImpactFx, createBgFlash, createConfettiEmitter } from '../visual-fx';
 import { createPaddleFace, type PaddleFace } from '../paddle-face';
@@ -19,6 +19,8 @@ const POINTS_PER_BRICK = 10;
 const BALL_OFFSET_Y = 24;
 const MAX_BOUNCE_ANGLE = 60;
 const BULLET_SPEED = 600;
+const BOMB_INITIAL_SPEED = 180;
+const BOMB_ACCEL = 1400;
 const ROW_TINTS = [
     0xff4455, 0xff6633, 0xff9922, 0xffcc11, 0x44dd44, 0x22ccaa, 0x4499ff, 0x6655ff, 0x9944ff,
     0xff44cc,
@@ -70,6 +72,11 @@ export class Game extends Scene {
     private paddleBroken = false;
     private hpBar!: GameObjects.Graphics;
     private bullets!: Physics.Arcade.Group;
+    private bombs = 0;
+    private maxBombs = 0;
+    private bombRadius = 0;
+    private bombsGroup!: Physics.Arcade.Group;
+    private bombText!: GameObjects.Text;
 
     constructor() {
         super('Game');
@@ -85,6 +92,9 @@ export class Game extends Scene {
         this.maxAmmo = up.shooting * 4;
         this.ammo = this.maxAmmo;
         this.coinMultiplier = 1 + up.coinMultiplier * 0.5;
+        const missileLevel = up.missile;
+        this.maxBombs = missileLevel > 0 ? 3 : 0;
+        this.bombRadius = missileLevel > 0 ? 80 + missileLevel * 20 : 0;
         this.coinsEarned = 0;
 
         this.generateTextures();
@@ -139,6 +149,18 @@ export class Game extends Scene {
             this,
         );
 
+        // Bombs
+        this.bombs = this.maxBombs;
+        this.bombsGroup = this.physics.add.group({ allowGravity: false });
+        this.physics.add.collider(
+            this.bombsGroup,
+            this.bricks,
+            this.hitBrickWithBomb,
+            undefined,
+            this,
+        );
+        this.input.mouse?.disableContextMenu();
+
         // UI text (depth 10)
         const dpr = window.devicePixelRatio;
         this.livesText = this.add
@@ -167,6 +189,15 @@ export class Game extends Scene {
             .setResolution(dpr)
             .setDepth(10)
             .setVisible(this.maxAmmo > 0);
+        this.bombText = this.add
+            .text(16, 64, `Bomb: ${this.bombs}`, {
+                fontFamily: FONT_FAMILY,
+                fontSize: '16px',
+                color: '#ff6633',
+            })
+            .setResolution(dpr)
+            .setDepth(10)
+            .setVisible(this.maxBombs > 0);
         this.messageBg = this.add.graphics().setDepth(9);
         this.messageText = this.add
             .text(centerX, height / 2, 'Click to Launch', {
@@ -201,11 +232,15 @@ export class Game extends Scene {
             }
         });
 
-        this.input.on('pointerdown', () => {
+        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             if (this.state === 'idle') {
                 this.launchBall();
-            } else if (this.state === 'playing' && this.ammo > 0) {
-                this.fireBullet();
+            } else if (this.state === 'playing') {
+                if (pointer.rightButtonDown()) {
+                    if (this.bombs > 0) this.throwBomb();
+                } else if (this.ammo > 0) {
+                    this.fireBullet();
+                }
             }
         });
 
@@ -239,6 +274,13 @@ export class Game extends Scene {
             this.bullets.children.each((b) => {
                 const bullet = b as Physics.Arcade.Image;
                 if (bullet.y < -10) bullet.destroy();
+                return true;
+            });
+
+            // Clean up bombs that left world bounds
+            this.bombsGroup.children.each((b) => {
+                const bomb = b as Physics.Arcade.Image;
+                if (bomb.y < -10) bomb.destroy();
                 return true;
             });
         }
@@ -277,6 +319,55 @@ export class Game extends Scene {
             tex(() => g.fillCircle(3, 3, 3), 'spark', 6, 6);
             tex(() => g.fillRect(0, 0, 8, 4), 'shard', 8, 4);
             tex(() => g.fillRect(0, 0, 4, 12), 'bullet', 4, 12);
+            tex(
+                () => {
+                    const cx = 12;
+                    // Ogive nose cone
+                    g.fillStyle(0xeeeeee);
+                    g.fillTriangle(cx, 0, cx - 5, 18, cx + 5, 18);
+                    // Nose tip highlight
+                    g.fillStyle(0xffffff);
+                    g.fillTriangle(cx, 0, cx - 2, 14, cx, 14);
+                    // Seeker dome
+                    g.fillStyle(0x999999);
+                    g.fillRect(cx - 5, 18, 10, 2);
+                    // Body
+                    g.fillStyle(0xdddddd);
+                    g.fillRect(cx - 5, 20, 10, 28);
+                    // Body left highlight
+                    g.fillStyle(0xffffff, 0.4);
+                    g.fillRect(cx - 5, 20, 3, 28);
+                    // Body right shadow
+                    g.fillStyle(0xaaaaaa, 0.4);
+                    g.fillRect(cx + 2, 20, 3, 28);
+                    // Warhead band
+                    g.fillStyle(0xffffff);
+                    g.fillRect(cx - 5, 23, 10, 2);
+                    // Mid marking
+                    g.fillStyle(0xbbbbbb);
+                    g.fillRect(cx - 5, 32, 10, 1);
+                    g.fillRect(cx - 5, 35, 10, 1);
+                    // Canard wings
+                    g.fillStyle(0xcccccc);
+                    g.fillTriangle(cx - 5, 26, cx - 12, 34, cx - 5, 32);
+                    g.fillTriangle(cx + 5, 26, cx + 12, 34, cx + 5, 32);
+                    // Main tail fins (large, swept)
+                    g.fillStyle(0xaaaaaa);
+                    g.fillTriangle(cx - 5, 40, cx - 12, 52, cx - 5, 48);
+                    g.fillTriangle(cx + 5, 40, cx + 12, 52, cx + 5, 48);
+                    // Nozzle
+                    g.fillStyle(0x888888);
+                    g.fillRect(cx - 3, 48, 6, 4);
+                    // Exhaust core
+                    g.fillStyle(0xffffff);
+                    g.fillCircle(cx, 54, 3);
+                    g.fillStyle(0xffffff, 0.4);
+                    g.fillCircle(cx, 56, 5);
+                },
+                'bomb',
+                24,
+                60,
+            );
         }
 
         g.destroy();
@@ -359,6 +450,8 @@ export class Game extends Scene {
         this.ball.setTint(BALL_TINT);
         this.paddleHp = this.maxPaddleHp;
         this.updatePaddleTint();
+        this.bombs = this.maxBombs;
+        this.bombText.setText(`Bomb: ${this.bombs}`);
 
         this.paddleBroken = false;
         this.paddle.setVisible(true);
@@ -400,6 +493,48 @@ export class Game extends Scene {
         (bullet.body as Physics.Arcade.Body).setVelocity(0, -BULLET_SPEED);
         this.ammo--;
         this.ammoText.setText(`Ammo: ${this.ammo}`);
+    }
+
+    private throwBomb() {
+        const bomb = this.bombsGroup.create(
+            this.paddle.x,
+            this.paddle.y - 16,
+            'bomb',
+        ) as Physics.Arcade.Image;
+        bomb.setTint(0xff6633);
+        bomb.setDepth(3);
+        const body = bomb.body as Physics.Arcade.Body;
+        body.setVelocity(0, -BOMB_INITIAL_SPEED);
+        body.setAccelerationY(-BOMB_ACCEL);
+        this.bombs--;
+        this.bombText.setText(`Bomb: ${this.bombs}`);
+    }
+
+    private hitBrickWithBomb(
+        _bomb: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+        _brick: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+    ) {
+        if (this.state !== 'playing') return;
+        const bomb = _bomb as Physics.Arcade.Image;
+        const brick = _brick as Physics.Arcade.Image;
+        const cx = brick.x;
+        const cy = brick.y;
+        bomb.destroy();
+
+        const toDestroy: Physics.Arcade.Image[] = [];
+        this.bricks.children.each((b) => {
+            const br = b as Physics.Arcade.Image;
+            if (!br.active) return true;
+            const dist = Phaser.Math.Distance.Between(cx, cy, br.x, br.y);
+            if (dist < this.bombRadius) toDestroy.push(br);
+            return true;
+        });
+
+        for (const br of toDestroy) {
+            this.destroyBrick(br);
+        }
+
+        emitExplosion(this, cx, cy);
     }
 
     private destroyBrick(brick: Physics.Arcade.Image) {

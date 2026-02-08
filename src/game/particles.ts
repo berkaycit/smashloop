@@ -29,3 +29,18 @@ export function emitBrickShards(scene: Phaser.Scene, x: number, y: number, tint:
     emitter.explode(6);
     scene.time.delayedCall(900, () => emitter.destroy());
 }
+
+export function emitExplosion(scene: Phaser.Scene, x: number, y: number) {
+    const emitter = scene.add.particles(x, y, 'spark', {
+        speed: { min: 200, max: 500 },
+        lifespan: 400,
+        quantity: 16,
+        scale: { start: 1.2, end: 0 },
+        tint: 0xff6633,
+        emitting: false,
+    });
+    emitter.setDepth(6);
+    emitter.explode(16);
+    scene.time.delayedCall(500, () => emitter.destroy());
+    scene.cameras.main.shake(50, 0.005);
+}
