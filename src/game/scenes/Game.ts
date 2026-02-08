@@ -122,8 +122,9 @@ export class Game extends Scene {
     }
 
     create(data?: { level?: number }) {
-        this.level = data?.level ?? 1;
-        const up = loadProgress().upgrades;
+        const progress = loadProgress();
+        this.level = data?.level ?? progress.level;
+        const up = progress.upgrades;
 
         this.lives = 1 + up.extraLives;
         this.paddleHalfW = 40 + up.paddleWidth * 10;
@@ -529,7 +530,11 @@ export class Game extends Scene {
     }
 
     private advanceLevel() {
-        this.jumpToLevel(this.level + 1);
+        const next = this.level + 1;
+        const progress = loadProgress();
+        progress.level = next;
+        saveProgress(progress);
+        this.jumpToLevel(next);
     }
 
     private jumpToLevel(level: number) {
@@ -775,6 +780,7 @@ export class Game extends Scene {
     private showEndScreen() {
         const progress = loadProgress();
         progress.coins += this.coinsEarned;
+        progress.level = this.state === 'win' ? 1 : this.level;
         saveProgress(progress);
 
         const { width, height } = this.scale;

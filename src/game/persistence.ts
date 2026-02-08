@@ -1,5 +1,6 @@
 export interface GameProgress {
     coins: number;
+    level: number;
     upgrades: {
         paddleHp: number;
         extraLives: number;
@@ -14,6 +15,7 @@ const SAVE_KEY = 'smashloop-save';
 
 const DEFAULT_PROGRESS: GameProgress = {
     coins: 0,
+    level: 1,
     upgrades: {
         paddleHp: 0,
         extraLives: 0,
@@ -31,6 +33,7 @@ export function loadProgress(): GameProgress {
     const defaults = structuredClone(DEFAULT_PROGRESS);
     return {
         coins: saved.coins ?? defaults.coins,
+        level: saved.level ?? defaults.level,
         upgrades: { ...defaults.upgrades, ...saved.upgrades },
     };
 }

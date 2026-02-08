@@ -32,7 +32,7 @@ All game logic lives in one scene class. No separate entity classes.
 
 **Brick health**: Bricks have per-level health (level 1 = 1 hit, level 2 = 2, level 3 = 3). Nested brick textures (`brick2`, `brick3`) generated programmatically with concentric rounded rects. `damageBrick()` decrements health, swaps texture, and plays hit feedback; `destroyBrick()` handles final removal. Bombs bypass health and destroy instantly.
 
-**Level progression**: When all bricks cleared, `advanceLevel()` proceeds to next level. On final level win, shows end screen. On game over, Play Again restarts current level; on win, restarts from level 1.
+**Level progression**: When all bricks cleared, `advanceLevel()` proceeds to next level and persists it. On final level win, shows end screen and resets saved level to 1. On game over, current level is persisted so the player resumes there on next session. `create()` reads saved level from persistence as fallback when no explicit level data is passed.
 
 ## Extracted Modules
 
@@ -40,7 +40,7 @@ All game logic lives in one scene class. No separate entity classes.
 - `paddle-face.ts` -- Paddle face with eyes (tracking ball), blink, mouth expressions, squash/stretch
 - `visual-fx.ts` -- Background flash overlay, confetti emitter factory, ball impact flash/scale effect
 - `particles.ts` -- Disposable particle emitters for brick/paddle destruction (sparks, shards) and bomb explosions
-- `persistence.ts` -- localStorage save/load for GameProgress (coins, upgrade levels). Merges saved data with defaults for forward-compatibility.
+- `persistence.ts` -- localStorage save/load for GameProgress (coins, current level, upgrade levels). Merges saved data with defaults for forward-compatibility.
 - `upgrades.ts` -- Upgrade definitions (key, name, maxLevel, cost scaling, effect labels, icon, position, prerequisites) and cost calculation
 - `skill-tree-render.ts` -- Skill tree node rendering: circular nodes with glow and progress rings, bezier curved connections (solid with glow for unlocked, dashed for locked), state color system, node container factory
 - `ui-utils.ts` -- Shared UI constants and helpers: `FONT_FAMILY`, `drawPanel` (rounded-rect with border), `upgradeLevel` (typed accessor)
