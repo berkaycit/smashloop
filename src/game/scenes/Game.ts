@@ -127,7 +127,7 @@ export class Game extends Scene {
 
         this.lives = 1 + up.extraLives;
         this.paddleHalfW = 40 + up.paddleWidth * 10;
-        this.maxPaddleHp = 5 + up.paddleHp * 3;
+        this.maxPaddleHp = 5 + up.paddleHp * 2;
         this.paddleHp = this.maxPaddleHp;
         this.maxAmmo = up.shooting * 4;
         this.ammo = this.maxAmmo;
