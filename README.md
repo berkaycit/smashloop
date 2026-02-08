@@ -35,3 +35,7 @@ Upload the `dist/` folder to any static server to deploy.
 - Phaser 3
 - TypeScript
 - Vite
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
