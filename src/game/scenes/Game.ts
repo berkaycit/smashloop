@@ -6,7 +6,6 @@ type GameState = 'idle' | 'playing' | 'gameOver' | 'win';
 const INITIAL_BALL_SPEED = 700;
 const SPEED_MULTIPLIER = 1.02;
 const BRICK_COLS = 10;
-const BRICK_ROWS = 5;
 const BRICK_W = 80;
 const BRICK_H = 28;
 const BRICK_PAD = 8;
@@ -16,7 +15,22 @@ const INITIAL_LIVES = 3;
 const BALL_OFFSET_Y = 24;
 const PADDLE_HALF_W = 60;
 const MAX_BOUNCE_ANGLE = 60;
-const ROW_TINTS = [0xff4444, 0xff8844, 0xffcc00, 0x44cc44, 0x4488ff];
+const ROW_TINTS = [
+    0xff4455, 0xff6633, 0xff9922, 0xffcc11, 0x44dd44, 0x22ccaa, 0x4499ff, 0x6655ff, 0x9944ff,
+    0xff44cc,
+];
+const HEART_SHAPE = [
+    [0, 0, 1, 1, 0, 0, 1, 1, 0, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
+];
 const BALL_TINT = 0xffeb3b;
 const PADDLE_TINT = 0x00e5ff;
 
@@ -100,7 +114,7 @@ export class Game extends Scene {
             lifespan: 500,
             scale: { start: 1.2, end: 0 },
             alpha: { start: 1, end: 0 },
-            tint: [0xff4444, 0xff8844, 0xffcc00, 0x44cc44, 0x4488ff, 0xff44ff],
+            tint: [0xff4455, 0xff9922, 0xffcc11, 0x44dd44, 0x4499ff, 0x9944ff],
             emitting: false,
         });
         this.confettiEmitter.setDepth(6);
@@ -118,7 +132,12 @@ export class Game extends Scene {
             .setOrigin(1, 0)
             .setDepth(10);
         this.messageText = this.add
-            .text(centerX, height / 2, 'Click to Launch', { fontSize: '32px', color: '#ffffff' })
+            .text(centerX, height / 2, 'Click to Launch', {
+                fontSize: '32px',
+                color: '#ffffff',
+                backgroundColor: 'rgba(0,0,0,0.75)',
+                padding: { x: 16, y: 10 },
+            })
             .setOrigin(0.5)
             .setDepth(10);
 
@@ -246,35 +265,24 @@ export class Game extends Scene {
         if (this.textures.exists('paddle')) return;
 
         const g = this.add.graphics();
-        g.fillStyle(0xffffff);
+        const tex = (draw: () => void, key: string, w: number, h: number) => {
+            g.fillStyle(0xffffff);
+            draw();
+            g.generateTexture(key, w, h);
+            g.clear();
+        };
 
-        g.fillRoundedRect(0, 0, PADDLE_HALF_W * 2, 20, 6);
-        g.generateTexture('paddle', PADDLE_HALF_W * 2, 20);
-        g.clear();
-
-        g.fillStyle(0xffffff);
-        g.fillCircle(8, 8, 8);
-        g.generateTexture('ball', 16, 16);
-        g.clear();
-
-        g.fillStyle(0xffffff);
-        g.fillRoundedRect(0, 0, BRICK_W, BRICK_H, 4);
-        g.generateTexture('brick', BRICK_W, BRICK_H);
-        g.clear();
-
-        g.fillStyle(0xffffff);
-        g.fillCircle(2, 2, 2);
-        g.generateTexture('particle', 4, 4);
-        g.clear();
-
-        g.fillStyle(0xffffff);
-        g.fillCircle(3, 3, 3);
-        g.generateTexture('spark', 6, 6);
-        g.clear();
-
-        g.fillStyle(0xffffff);
-        g.fillRect(0, 0, 8, 4);
-        g.generateTexture('shard', 8, 4);
+        tex(
+            () => g.fillRoundedRect(0, 0, PADDLE_HALF_W * 2, 20, 6),
+            'paddle',
+            PADDLE_HALF_W * 2,
+            20,
+        );
+        tex(() => g.fillCircle(8, 8, 8), 'ball', 16, 16);
+        tex(() => g.fillRoundedRect(0, 0, BRICK_W, BRICK_H, 4), 'brick', BRICK_W, BRICK_H);
+        tex(() => g.fillCircle(2, 2, 2), 'particle', 4, 4);
+        tex(() => g.fillCircle(3, 3, 3), 'spark', 6, 6);
+        tex(() => g.fillRect(0, 0, 8, 4), 'shard', 8, 4);
 
         g.destroy();
     }
@@ -283,8 +291,9 @@ export class Game extends Scene {
         const totalW = BRICK_COLS * BRICK_W + (BRICK_COLS - 1) * BRICK_PAD;
         const startX = (this.scale.width - totalW) / 2 + BRICK_W / 2;
 
-        for (let row = 0; row < BRICK_ROWS; row++) {
+        for (let row = 0; row < HEART_SHAPE.length; row++) {
             for (let col = 0; col < BRICK_COLS; col++) {
+                if (!HEART_SHAPE[row][col]) continue;
                 const x = startX + col * (BRICK_W + BRICK_PAD);
                 const y = BRICK_TOP_Y + row * (BRICK_H + BRICK_PAD);
                 const brick = this.bricks.create(x, y, 'brick') as Physics.Arcade.Image;

@@ -22,7 +22,7 @@ All game logic lives in one scene class. No separate entity classes.
 
 **Accessor**: `ballBody` getter centralizes the `Physics.Arcade.Body` cast
 
-**Layout**: positions derived from `this.scale` (width/height), not hardcoded pixel values. Tuning constants (speeds, sizes, counts) defined as module-level consts.
+**Layout**: positions derived from `this.scale` (width/height), not hardcoded pixel values. Tuning constants (speeds, sizes, counts) defined as module-level consts. Bricks arranged in a heart shape via `HEART_SHAPE` bitmask (10 rows x 10 cols, 70 bricks). Row count derived from `HEART_SHAPE.length`; row tints use a rainbow gradient.
 
 ## Particles (particles.ts)
 
